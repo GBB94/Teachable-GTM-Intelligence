@@ -45,6 +45,8 @@ SCAN_LIMIT = 50
 SCAN_TITLE_KEYWORDS = DEFAULT_SCAN_TITLE_KEYWORDS
 SCAN_OWNERS = ['zach.mccall', 'jerome.olaloye', 'kevin.codde']
 SCAN_EXCLUDE_DOMAINS = ['teachable.com']
+# Owners whose solo calls (no other team member present) should be excluded from scans
+SCAN_SOLO_EXCLUDE = ['jerome.olaloye']
 PORT = 8080
 
 TEMPLATE_PATH = os.path.join(REPO_DIR, 'dashboard_template.html')
@@ -261,6 +263,14 @@ def scan_preview():
         if last_scan_dt:
             print(f"[preview] Last scan: {last_scan_dt.isoformat()} — {len(known_ids)} known IDs (imported + rejected)")
         calls = retriever.get_calls(filter_criteria=filt, verbose=True, after_date=after_date)
+        if retriever.last_error:
+            print(f"[preview] Fireflies upstream error: {retriever.last_error}")
+            return jsonify({
+                "error": "Fireflies timed out while fetching calls. Try scanning again in a few minutes.",
+                "source": "fireflies",
+                "details": retriever.last_error,
+                "retryable": True,
+            }), 502
         print(f"[preview] Found {len(calls)} calls")
 
         # Don't record scan timestamp here — only after calls are actually
@@ -269,12 +279,23 @@ def scan_preview():
         # Cache for /process (include all calls, even known ones, so /process can find them)
         _preview_cache = {call.id: call for call in calls}
 
-        # Build preview — exclude known IDs entirely
+        # Build preview — exclude known IDs and solo SDR calls
+        team_emails = {o.lower() for o in SCAN_OWNERS}
+        solo_exclude = {o.lower() for o in SCAN_SOLO_EXCLUDE}
         preview = []
         skipped = 0
+        solo_skipped = 0
         for call in calls:
             if call.id in known_ids:
                 skipped += 1
+                continue
+            # Skip calls where a solo-exclude owner is the only team member
+            all_emails = [e.lower() for e in call.attendee_emails]
+            if call.organizer_email:
+                all_emails.append(call.organizer_email.lower())
+            team_on_call = {o for o in team_emails if any(o in e for e in all_emails)}
+            if team_on_call and all(o in solo_exclude for o in team_on_call):
+                solo_skipped += 1
                 continue
             preview.append({
                 "id": call.id,
@@ -289,6 +310,8 @@ def scan_preview():
 
         if skipped:
             print(f"[preview] Skipped {skipped} already-known calls (imported or rejected)")
+        if solo_skipped:
+            print(f"[preview] Skipped {solo_skipped} solo SDR calls (no other team member present)")
 
         return jsonify({
             "calls": preview,

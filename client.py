@@ -56,6 +56,7 @@ class FirefliesRetriever:
         # API usage counters — reset at the start of each get_calls() run
         self.api_calls_made = 0
         self.raw_transcripts_fetched = 0
+        self.last_error: Optional[str] = None
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -141,8 +142,10 @@ class FirefliesRetriever:
             results = data.get("data", {}).get("transcripts", [])
             self.api_calls_made += 1
             self.raw_transcripts_fetched += len(results)
+            self.last_error = None
             return results
         except Exception as e:
+            self.last_error = str(e)
             print(f"Error fetching transcripts: {e}")
             return []
 
@@ -353,6 +356,7 @@ class FirefliesRetriever:
         # Reset API counters for this run
         self.api_calls_made = 0
         self.raw_transcripts_fetched = 0
+        self.last_error = None
 
         filtered_calls: List[Call] = []
         current_skip = filter_criteria.skip

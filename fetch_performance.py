@@ -651,16 +651,15 @@ def build_performance_data(days: int = 90) -> dict:
     now_et = datetime.now(ET)
     today = now_et.date()
 
-    # Enforce minimum so all_dates always covers the widest slice + its prior period.
-    # The 90d prior period starts 179 days back; anything less silently undercounts.
+    # The dashboard emits 90d slices with prior-period comparisons reaching
+    # back 179 days. Anything less silently undercounts.
     MIN_DAYS = 90
     if days < MIN_DAYS:
-        logger.warning(
-            "--days %d is less than minimum %d; clamping to %d to avoid "
-            "silent undercount in 90d slice and prior-period comparisons.",
-            days, MIN_DAYS, MIN_DAYS,
+        raise SystemExit(
+            f"ERROR: --days {days} is too short. The dashboard shows 90d slices, "
+            f"so the fetch window must be at least {MIN_DAYS} days. "
+            f"Use --days {MIN_DAYS} (the default) or higher."
         )
-        days = MIN_DAYS
 
     window_start = today - timedelta(days=days - 1)
     # For prior period comparisons we need data going further back

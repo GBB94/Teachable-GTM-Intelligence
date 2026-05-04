@@ -3105,6 +3105,7 @@ body {
 .perf-rep-dimmed td { opacity: 0.38; }
 
 /* Reps scorecard */
+.perf-reps-pipeline-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; padding: 0.25rem 0; }
 .perf-reps-wrap { overflow-x: auto; }
 .perf-reps-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .perf-reps-table th { padding: 0.5rem 0.75rem; text-align: left; color: #6b7084; font-weight: 600; font-size: 0.78rem; border-bottom: 1px solid #1e2130; white-space: nowrap; }
@@ -3115,6 +3116,95 @@ body {
 .perf-rep-row:focus-visible { outline: 2px solid #4a7cff; outline-offset: -2px; }
 .perf-rep-unassigned { cursor: default; color: #555a6e; }
 .perf-rep-unassigned:hover td { background: none; }
+
+/* ── Reps table header tooltips ── */
+.reps-th-wrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.3rem;
+    width: 100%;
+}
+.reps-th-btn {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    white-space: nowrap;
+}
+.reps-th-tip-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+.reps-th-tip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #1e2130;
+    border: 1px solid #2a2e40;
+    color: #4a4e62;
+    font-size: 0.58rem;
+    font-weight: 700;
+    cursor: help;
+    flex-shrink: 0;
+    line-height: 1;
+    transition: border-color 0.12s, color 0.12s;
+    user-select: none;
+}
+.reps-th-tip-wrap:hover .reps-th-tip-icon,
+.reps-th-tip-icon:focus-visible {
+    border-color: #4a6cf7;
+    color: #7a9cff;
+}
+
+/* Tooltip opens downward */
+.reps-col-tip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 240px;
+    background: #1a1d2b;
+    border: 1px solid #2a2e40;
+    border-radius: 10px;
+    padding: 0.8rem 0.95rem;
+    z-index: 500;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.55);
+    pointer-events: none;
+    text-align: left;
+    font-weight: 400;
+    white-space: normal;
+}
+.reps-col-tip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    right: 12px;
+    border: 7px solid transparent;
+    border-bottom-color: #2a2e40;
+}
+.reps-th-tip-wrap:hover .reps-col-tip,
+.reps-th-tip-icon:focus-visible ~ .reps-col-tip {
+    display: block;
+}
+
+.reps-tip-what   { font-size: 0.78rem; color: #d0d3db; line-height: 1.45; margin-bottom: 0.4rem; }
+.reps-tip-source { font-size: 0.71rem; color: #4a7cff; margin-bottom: 0.35rem; font-weight: 500; }
+.reps-tip-caveat { font-size: 0.7rem;  color: #6b7084; line-height: 1.4; font-style: italic; }
+
+/* Unassigned note */
+.reps-unassigned-note {
+    font-size: 0.72rem;
+    color: #3a3e52;
+    cursor: help;
+    margin-left: 0.2rem;
+}
 .perf-cell-with-target { line-height: 1.3; }
 .perf-cell-primary { display: block; font-family: 'JetBrains Mono', monospace; }
 .perf-cell-secondary { display: block; font-size: 0.72rem; color: #555a6e; }
@@ -7371,7 +7461,11 @@ async function startScan(btn) {
         const resp = await fetch('/api/scan/preview');
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({}));
-            throw new Error(err.error || 'Preview failed (' + resp.status + ')');
+            const msg = err.error || 'Preview failed (' + resp.status + ')';
+            const detail = err.source === 'fireflies'
+                ? 'Fireflies is not responding right now, so the scan could not fetch calls.'
+                : '';
+            throw new Error(detail ? (msg + ' ' + detail) : msg);
         }
         const data = await resp.json();
         _scanPreviewCalls = data.calls || [];
@@ -10743,6 +10837,9 @@ function buildPerfPipelineFlowSection(slice) {
 let _perfStalledStageFilter = '';
 let _perfStalledRepFilter = '';
 
+// Reps view pipeline filter
+let _perfRepsPipelineFilter = '';
+
 // Pipeline Risk Explorer local state
 let _perfRiskPipelineFilter = '';
 let _perfRiskStageFilter    = '';
@@ -11220,6 +11317,54 @@ function _perfGetPeriodDateRange(periodKey) {
 
 let _perfDrawerTrigger = null;
 
+const _REPS_COL_TIPS = {
+    'Meetings Booked': {
+        what: 'Meetings scheduled via the HubSpot meeting booking link this period.',
+        source: 'HubSpot \u00b7 meetings.read',
+        caveat: 'Only captures meetings booked through the HubSpot scheduler. Most reliable for SDR-booked meetings. Manually logged meetings are excluded.',
+    },
+    'Deals Won': {
+        what: 'Deals moved to a Won stage this period, counted by close date.',
+        source: 'HubSpot \u00b7 deals.read',
+        caveat: 'Flow metric \u2014 counts closes in-period only. Table is sorted by this column by default.',
+    },
+    'Open Pipeline': {
+        what: 'Current open deal value for this rep as of today.',
+        source: 'HubSpot \u00b7 deals.read',
+        caveat: 'Snapshot metric \u2014 not affected by the period selector. Reflects the current moment, not the selected date range.',
+    },
+    'Reply Rate': {
+        what: 'Percentage of outbound emails that received a reply.',
+        source: 'Mixmax \u00b7 /livefeed',
+        caveat: 'Only covers reps with a Mixmax API token configured. Reps without a token show 0% \u2014 not a true zero.',
+    },
+    'Recorded Calls': {
+        what: 'Calls recorded via Fireflies this period.',
+        source: 'Fireflies \u00b7 GraphQL',
+        caveat: 'Does not include unrecorded calls or calls logged manually in HubSpot.',
+    },
+    'Attainment': {
+        what: 'Average of (actual \u00f7 target) across all metrics with targets configured.',
+        source: 'performance_targets.json',
+        caveat: 'Targets are monthly. Values shown for non-MTD periods will be inflated \u2014 use MTD or Last Mo for meaningful attainment.',
+    },
+};
+
+function _repsColTip(label) {
+    const t = _REPS_COL_TIPS[label];
+    if (!t) return '';
+    return `<div class="reps-col-tip" role="tooltip">
+        <div class="reps-tip-what">${t.what}</div>
+        <div class="reps-tip-source">${t.source}</div>
+        <div class="reps-tip-caveat">${t.caveat}</div>
+    </div>`;
+}
+
+function _perfSetRepsPipeline(value) {
+    _perfRepsPipelineFilter = value;
+    buildPerformance();
+}
+
 function buildPerfRepsView(slice) {
     const reps = (slice.by_rep || []).filter(r => r.email !== 'unassigned');
     const unassigned = (slice.by_rep || []).find(r => r.email === 'unassigned');
@@ -11227,12 +11372,58 @@ function buildPerfRepsView(slice) {
     reps.sort((a, b) => (b.deals_won || 0) - (a.deals_won || 0));
     const allRows = unassigned ? [...reps, unassigned] : reps;
 
-    let html = '<div class="perf-reps-wrap"><table class="perf-reps-table" role="table"><thead><tr>';
+    // Pipeline selector
+    const availablePipelines = [...new Set((PERF.open_pipeline?.by_pipeline || []).map(pp => pp.pipeline_label))];
+    let html = '';
+    if (availablePipelines.length > 1) {
+        const pipeOpts = availablePipelines.map(p =>
+            `<option value="${_perfEsc(p)}"${p === _perfRepsPipelineFilter ? ' selected' : ''}>${_perfEsc(p)}</option>`
+        ).join('');
+        html += `<div class="perf-reps-pipeline-bar">
+            <span class="perf-ctrl-label">Pipeline</span>
+            <select class="perf-stalled-select perf-focus-visible" onchange="_perfSetRepsPipeline(this.value)">
+                <option value="">All Pipelines</option>${pipeOpts}
+            </select>
+            ${_perfRepsPipelineFilter ? `<button class="perf-scope-clear perf-focus-visible"
+                onclick="_perfRepsPipelineFilter='';buildPerformance()"
+                aria-label="Reset pipeline filter">Reset</button>` : ''}
+        </div>`;
+    }
+
+    html += '<div class="perf-reps-wrap"><table class="perf-reps-table" role="table"><thead><tr>';
     html += '<th>Rep</th>';
     ['Meetings Booked', 'Deals Won', 'Open Pipeline', 'Reply Rate', 'Recorded Calls'].forEach(h => {
-        html += `<th class="num"><button class="perf-focus-visible">${h}</button></th>`;
+        html += `<th class="num">
+            <div class="reps-th-wrap">
+                <button class="perf-focus-visible reps-th-btn">${h}</button>
+                <div class="reps-th-tip-wrap">
+                    <span class="reps-th-tip-icon perf-focus-visible"
+                        tabindex="0"
+                        role="button"
+                        aria-label="About ${h}"
+                        title="${_REPS_COL_TIPS[h]?.what || ''}">?</span>
+                    ${_repsColTip(h)}
+                </div>
+            </div>
+        </th>`;
     });
-    if (hasTargets) html += '<th class="num"><button class="perf-focus-visible">Attainment</button></th>';
+    if (hasTargets) {
+        const attainPeriodWarn = (_perfActivePeriod !== 'this_month' && _perfActivePeriod !== 'last_month')
+            ? ' \u26A0' : '';
+        html += `<th class="num">
+            <div class="reps-th-wrap">
+                <button class="perf-focus-visible reps-th-btn">Attainment${attainPeriodWarn}</button>
+                <div class="reps-th-tip-wrap">
+                    <span class="reps-th-tip-icon perf-focus-visible"
+                        tabindex="0"
+                        role="button"
+                        aria-label="About Attainment"
+                        title="${_REPS_COL_TIPS['Attainment'].what}">?</span>
+                    ${_repsColTip('Attainment')}
+                </div>
+            </div>
+        </th>`;
+    }
     html += '</tr></thead><tbody>';
 
     for (const rep of allRows) {
@@ -11242,11 +11433,24 @@ function buildPerfRepsView(slice) {
         const rowCls = ['perf-rep-row', isU ? 'perf-rep-unassigned' : '', isHighlighted ? 'perf-rep-highlighted' : '', isDimmed ? 'perf-rep-dimmed' : ''].filter(Boolean).join(' ');
         html += `<tr class="${rowCls}"${
             !isU ? ` onclick="openPerfDrawer('${rep.email.replace(/'/g,"\\'")}')" onkeydown="if(event.key==='Enter')openPerfDrawer('${rep.email.replace(/'/g,"\\'")}')" tabindex="0"` : ' tabindex="-1"'}>`;
-        html += `<td>${_perfEsc(rep.name || rep.email)}</td>`;
+        html += `<td>${_perfEsc(rep.name || rep.email)}${isU
+            ? ' <span class="reps-unassigned-note" title="Activity that could not be attributed to a known rep">(?)</span>'
+            : ''}</td>`;
         html += _perfRepMetricCell(rep, 'meetings_booked');
         html += _perfRepMetricCell(rep, 'deals_won');
-        const pipeRep = ((PERF.open_pipeline || {}).by_rep || []).find(r => r.email === rep.email);
-        html += `<td class="num">${pipeRep && pipeRep.value ? _perfFmtCurrency(pipeRep.value) : '$\u2014'}</td>`;
+
+        // Open Pipeline: filter by pipeline when selector is active
+        let pipeValue = null;
+        if (_perfRepsPipelineFilter && !isU) {
+            const detail = (PERF.by_rep_detail || {})[rep.email];
+            const wonLostStages = new Set(Object.entries(PERF.pipeline_stages || {}).filter(([,l]) => l.toUpperCase() === 'WON' || l.toUpperCase() === 'LOST').map(([id]) => id));
+            const filtered = (detail?.open_deals || []).filter(d => d.pipeline === _perfRepsPipelineFilter && !wonLostStages.has(d.stage_id));
+            pipeValue = filtered.reduce((sum, d) => sum + (d.amount || 0), 0);
+        } else {
+            const pipeRep = ((PERF.open_pipeline || {}).by_rep || []).find(r => r.email === rep.email);
+            pipeValue = pipeRep?.value || null;
+        }
+        html += `<td class="num">${pipeValue ? _perfFmtCurrency(pipeValue) : '$\u2014'}</td>`;
         html += `<td class="num">${rep.reply_rate != null ? _perfFmtPct(rep.reply_rate) : '\u2014'}</td>`;
         html += _perfRepMetricCell(rep, 'recorded_calls');
         if (hasTargets) {
