@@ -73,10 +73,31 @@ body {
     padding: 0.75rem 1.5rem; font-size: 1rem; font-weight: 600;
     color: #8b8fa3; cursor: pointer; border-bottom: 2px solid transparent;
     border-radius: 8px 8px 0 0;
-    transition: all 0.15s; user-select: none;
+    transition: all 0.2s ease; user-select: none;
+    position: relative;
 }
-.tab:hover { color: #c8cad2; background: rgba(255,255,255,0.02); }
-.tab.active { color: #f0f1f4; background: #1a1d2e; border-bottom-color: #4a7cff; }
+.tab:hover { color: #c8cad2; background: rgba(255,255,255,0.04); transform: translateY(-1px); }
+.tab.active {
+    color: #f0f1f4; background: #1a1d2e; border-bottom-color: #4a7cff;
+    box-shadow: 0 -2px 12px rgba(74,124,255,0.12);
+}
+.tab.active:hover { transform: none; }
+
+/* Tab tooltips */
+.tab::after {
+    content: attr(data-tooltip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%;
+    transform: translateX(-50%) translateY(4px); opacity: 0;
+    pointer-events: none;
+    background: #1e2130; color: #c8cad2; border: 1px solid #2a2d40;
+    font-size: 0.72rem; font-weight: 400; line-height: 1.4;
+    padding: 6px 10px; border-radius: 6px; white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 100;
+}
+.tab:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
+.tab.active::after { opacity: 0; }
 
 /* Filter row */
 .filter-row {
@@ -4216,14 +4237,14 @@ body {
         <span><span class="nr-banner-count" id="nr-count">0</span> items need manual categorization</span>
     </div>
     <div class="tabs">
-        <div class="tab active" data-tab="features" onclick="switchTab('features')">By Feature</div>
-        <div class="tab" data-tab="calls" onclick="switchTab('calls')">By Call</div>
-        <div class="tab" data-tab="personas" onclick="switchTab('personas')">Personas</div>
-        <div class="tab" data-tab="competitors" onclick="switchTab('competitors')">Competitors</div>
-        <div class="tab" data-tab="reports" onclick="switchTab('reports')">Reports</div>
-        <div class="tab" data-tab="prospecting" onclick="switchTab('prospecting')">Prospecting <svg class="tab-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
-        <div class="tab" data-tab="performance" onclick="switchTab('performance')">Performance</div>
-        <div class="tab" data-tab="winloss" onclick="switchTab('winloss')">Win/Loss</div>
+        <div class="tab active" data-tab="features" data-tooltip="Feature mentions ranked by frequency and sentiment" onclick="switchTab('features')">By Feature</div>
+        <div class="tab" data-tab="calls" data-tooltip="Browse individual call transcripts and extracted signals" onclick="switchTab('calls')">By Call</div>
+        <div class="tab" data-tab="personas" data-tooltip="Buyer personas and what they care about" onclick="switchTab('personas')">Personas</div>
+        <div class="tab" data-tab="competitors" data-tooltip="Competitive landscape from prospect conversations" onclick="switchTab('competitors')">Competitors</div>
+        <div class="tab" data-tab="reports" data-tooltip="AI-generated insights and trend summaries" onclick="switchTab('reports')">Reports</div>
+        <div class="tab" data-tab="prospecting" data-tooltip="Target accounts and outreach signals" onclick="switchTab('prospecting')">Prospecting <svg class="tab-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <div class="tab" data-tab="performance" data-tooltip="Rep and pipeline performance metrics" onclick="switchTab('performance')">Performance</div>
+        <div class="tab" data-tab="winloss" data-tooltip="Win/loss analysis with revenue-weighted signals" onclick="switchTab('winloss')">Win/Loss</div>
     </div>
     <div class="filter-row" id="filter-row">
         <div class="search-box"><input id="q" placeholder="Search..." oninput="filter(this.value)"><span class="search-result-count" id="search-result-count"></span><button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">&times;</button></div>
