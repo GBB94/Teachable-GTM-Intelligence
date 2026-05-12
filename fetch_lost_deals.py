@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-Fetch closed-won and closed-lost deals from HubSpot, extract feature and
-competitor signals from deal notes via Haiku, and write win_loss.json.
+Fetch closed-won and closed-lost deals from HubSpot and write win_loss.json.
+
+Feature signals come from HubSpot structured close-time fields only:
+  - product_feedback dropdown (27 confirmed options, multi-select)
+  - notes_on_customer_feedback (stored verbatim)
+Competitor and loss type data come from structured HubSpot fields.
+No Anthropic API key required for default operation.
+
+Optional: --api-extract enhances feedback notes with AI feature extraction.
 
 Reuses pipeline/search helpers from fetch_performance.py.
 
@@ -41,6 +48,39 @@ from fetch_performance import (
 )
 
 DEFAULT_LOST_AMOUNT = 6000.0  # Teachable base enterprise cost estimate
+
+# Confirmed dropdown options from HubSpot product_feedback property (May 2026).
+# Only values in this set count as confirmed feature gaps.
+# Update if new options are added to the HubSpot dropdown.
+PRODUCT_FEEDBACK_OPTIONS = {
+    "SCORM Support",
+    "Certificate Issuance",
+    "Progress Tracking",
+    "Course Enrollment Limits",
+    "Waitlist",
+    "Large File Upload",
+    "Course Integration",
+    "Discussion Board/Forum",
+    "Website Builder Integration",
+    "Bulk Content Upload",
+    "Setup in User Language (Spanish)",
+    "Coaching Workspace",
+    "Coaching Notes",
+    "Coaching Accountability",
+    "Coaching Automation",
+    "Zoom Integration",
+    "One-Click Access (No Login Required)",
+    "Multi-Level Admin Hierarchy (Organizations)",
+    "Centralized / Org-Level Reporting",
+    "Attendance Reporting (Compliance Use Case)",
+    "Personalized Learning Paths (Rules-Based)",
+    "Conditional Content Visibility (Per User)",
+    "Quiz-Based Routing & Enrollment",
+    "Org-Level Learning Analytics (Journey View)",
+    "Centralized Knowledge Management",
+    "EU Data Residency (Regional Data Hosting Requirement)",
+    "Embedded Learning Experience (No Separate Login)",
+}
 # Only applied to Sales pipeline lost deals (Discovery stage or later by definition,
 # since Discovery is the first stage in the Sales pipeline). Pre Sales deals are
 # excluded by pipeline filter. Substance gating (MIN_NOTE_CHARS) further ensures
@@ -119,6 +159,7 @@ def pull_closed_deals(token: str, since: datetime, outcome_ids: dict) -> list[di
             "kb_or_pd_deal",
             "uses_competitor_platform",
             "competitor_platform",
+            "lead_source",
         ],
         "limit": 100,
         "sorts": [{"propertyName": "closedate", "direction": "DESCENDING"}],
@@ -141,6 +182,127 @@ def _note_has_keyword_override(text: str) -> bool:
     """Return True if the sanitized note contains any high-value terms."""
     lower = text.lower()
     return any(term in lower for term in KEYWORD_OVERRIDE_TERMS)
+
+
+def _parse_product_feedback(raw: str) -> list[str]:
+    """Parse product_feedback multi-select into a confirmed list of feature names.
+
+    HubSpot returns multi-select values as semicolon-separated strings.
+    Only returns values present in PRODUCT_FEEDBACK_OPTIONS.
+    """
+    if not raw:
+        return []
+    values    = [v.strip() for v in raw.split(";") if v.strip()]
+    confirmed = [v for v in values if v in PRODUCT_FEEDBACK_OPTIONS]
+    unknown   = [v for v in values if v not in PRODUCT_FEEDBACK_OPTIONS]
+    if unknown:
+        logger.warning(
+            "product_feedback contained unrecognised values: %s -- "
+            "check if new options were added to HubSpot and update PRODUCT_FEEDBACK_OPTIONS",
+            unknown,
+        )
+    return confirmed
+
+
+# Keyword variants that map to canonical PRODUCT_FEEDBACK_OPTIONS names.
+# Lowercase fragments -> canonical name. Checked against feedback notes text.
+_FEATURE_KEYWORD_MAP = {
+    "scorm": "SCORM Support",
+    "certificate": "Certificate Issuance",
+    "progress track": "Progress Tracking",
+    "enrollment limit": "Course Enrollment Limits",
+    "waitlist": "Waitlist",
+    "large file": "Large File Upload",
+    "file upload": "Large File Upload",
+    "course integration": "Course Integration",
+    "discussion board": "Discussion Board/Forum",
+    "forum": "Discussion Board/Forum",
+    "website builder": "Website Builder Integration",
+    "bulk upload": "Bulk Content Upload",
+    "bulk content": "Bulk Content Upload",
+    "spanish": "Setup in User Language (Spanish)",
+    "user language": "Setup in User Language (Spanish)",
+    "coaching workspace": "Coaching Workspace",
+    "coaching notes": "Coaching Notes",
+    "coaching accountability": "Coaching Accountability",
+    "coaching automation": "Coaching Automation",
+    "zoom": "Zoom Integration",
+    "one-click access": "One-Click Access (No Login Required)",
+    "no login": "One-Click Access (No Login Required)",
+    "admin hierarchy": "Multi-Level Admin Hierarchy (Organizations)",
+    "multi-level admin": "Multi-Level Admin Hierarchy (Organizations)",
+    "org hierarchy": "Multi-Level Admin Hierarchy (Organizations)",
+    "org-level reporting": "Centralized / Org-Level Reporting",
+    "centralized reporting": "Centralized / Org-Level Reporting",
+    "attendance report": "Attendance Reporting (Compliance Use Case)",
+    "compliance": "Attendance Reporting (Compliance Use Case)",
+    "learning path": "Personalized Learning Paths (Rules-Based)",
+    "personalized learning": "Personalized Learning Paths (Rules-Based)",
+    "conditional content": "Conditional Content Visibility (Per User)",
+    "content visibility": "Conditional Content Visibility (Per User)",
+    "quiz-based routing": "Quiz-Based Routing & Enrollment",
+    "quiz routing": "Quiz-Based Routing & Enrollment",
+    "learning analytics": "Org-Level Learning Analytics (Journey View)",
+    "journey view": "Org-Level Learning Analytics (Journey View)",
+    "knowledge management": "Centralized Knowledge Management",
+    "eu data residency": "EU Data Residency (Regional Data Hosting Requirement)",
+    "data residency": "EU Data Residency (Regional Data Hosting Requirement)",
+    "regional data": "EU Data Residency (Regional Data Hosting Requirement)",
+    "embedded learning": "Embedded Learning Experience (No Separate Login)",
+    "no separate login": "Embedded Learning Experience (No Separate Login)",
+}
+
+
+def _extract_features_from_notes(feedback_notes: str, outcome: str) -> list[dict]:
+    """Extract features from notes_on_customer_feedback using local keyword matching.
+
+    Matches against canonical feature names (exact, case-insensitive) and
+    keyword variants. No API call needed.
+    """
+    if not feedback_notes:
+        return []
+
+    lower = feedback_notes.lower()
+    found: dict[str, str | None] = {}  # canonical name -> quote snippet or None
+
+    # Check canonical names directly (case-insensitive)
+    for canonical in PRODUCT_FEEDBACK_OPTIONS:
+        if canonical.lower() in lower:
+            # Extract a short quote around the match
+            idx = lower.index(canonical.lower())
+            start = max(0, idx - 30)
+            end = min(len(feedback_notes), idx + len(canonical) + 30)
+            snippet = feedback_notes[start:end].strip()
+            if start > 0:
+                snippet = "..." + snippet
+            if end < len(feedback_notes):
+                snippet = snippet + "..."
+            found[canonical] = snippet
+
+    # Check keyword variants
+    for keyword, canonical in _FEATURE_KEYWORD_MAP.items():
+        if canonical not in found and keyword in lower:
+            idx = lower.index(keyword)
+            start = max(0, idx - 30)
+            end = min(len(feedback_notes), idx + len(keyword) + 30)
+            snippet = feedback_notes[start:end].strip()
+            if start > 0:
+                snippet = "..." + snippet
+            if end < len(feedback_notes):
+                snippet = snippet + "..."
+            found[canonical] = snippet
+
+    sentiment = "positive" if outcome == "WON" else "negative"
+    return [
+        {
+            "feature":     name,
+            "sentiment":   sentiment,
+            "source":      "feedback_notes",
+            "loss_causal": True,
+            "quote":       quote,
+        }
+        for name, quote in found.items()
+    ]
 
 
 def _note_hash(note_objects: list) -> str:
@@ -290,28 +452,105 @@ def _build_deal_property_text(props: dict) -> str:
 # AI extraction (Haiku)
 # ---------------------------------------------------------------------------
 
-EXTRACTION_PROMPT = """You are analyzing closed sales deal notes to extract product and competitive signals.
+# ---------------------------------------------------------------------------
+# Feature extraction: close-time fields only
+# ---------------------------------------------------------------------------
+
+FEEDBACK_NOTES_FEATURE_PROMPT = """A sales rep wrote the following notes when marking a deal as {outcome}.
+Extract ONLY features explicitly stated as missing, unavailable, or a reason
+the deal was lost. Do not extract features Teachable has, features demoed
+positively, or features mentioned only as context.
+
+Close notes: {notes}
+
+Return JSON only:
+{{
+  "features": [
+    {{
+      "feature": "canonical feature name",
+      "quote": "exact phrase from notes, under 20 words"
+    }}
+  ]
+}}
+
+Rules:
+- INCLUDE: "they needed X", "missing X", "no X support", "lost because of X",
+  "X was a dealbreaker", "X isn't available yet"
+- EXCLUDE: "we showed them X", "they liked X", "X works well", anything
+  Teachable already has and works
+- Use canonical names: "SCORM Support" not "scorm files",
+  "Multi-Level Admin Hierarchy (Organizations)" not "org hierarchy",
+  "Centralized / Org-Level Reporting" not "reporting"
+- If nothing qualifies, return {{"features": []}}
+- Return valid JSON only
+"""
+
+
+def extract_features_from_feedback_notes(
+    deal_id: str, outcome: str, feedback_notes: str,
+    cache: dict, client,
+) -> list[dict]:
+    """Extract loss-causal features from notes_on_customer_feedback only."""
+    cache_key = f"{deal_id}:feedback_features:{hashlib.sha256(feedback_notes.encode()).hexdigest()[:12]}"
+    if cache_key in cache:
+        return cache[cache_key]
+
+    prompt = FEEDBACK_NOTES_FEATURE_PROMPT.format(
+        outcome=outcome, notes=feedback_notes
+    )
+    response = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    try:
+        raw_text = response.content[0].text
+        if raw_text.strip().startswith("```"):
+            raw_text = re.sub(r'^```\w*\n?', '', raw_text.strip())
+            raw_text = re.sub(r'\n?```$', '', raw_text.strip())
+        features = json.loads(raw_text).get("features", [])
+    except (json.JSONDecodeError, IndexError):
+        features = []
+
+    sentiment = "positive" if outcome == "WON" else "negative"
+    normalized = [
+        {
+            "feature":     f.get("feature", ""),
+            "sentiment":   sentiment,
+            "source":      "feedback_notes",
+            "loss_causal": True,
+            "quote":       f.get("quote"),
+        }
+        for f in features if f.get("feature")
+    ]
+    cache[cache_key] = normalized
+    return normalized
+
+
+# ---------------------------------------------------------------------------
+# AI extraction: competitors, pricing, outcome only (no features)
+# ---------------------------------------------------------------------------
+
+EXTRACTION_PROMPT = """You are analyzing a closed sales deal. Extract competitive and pricing signals only.
+Do NOT extract features. Feature extraction is handled separately.
 
 Deal outcome: {outcome}
 Deal amount: {amount}
-Notes:
-{notes}
+
+Close notes (rep's narrative at time of loss):
+{feedback_notes}
+
+Supporting timeline notes (context from deal lifecycle):
+{supporting_notes}
 
 Return JSON only. No preamble, no markdown:
 {{
-  "features_mentioned": [
-    {{
-      "feature": "canonical feature name",
-      "sentiment": "positive|negative|neutral",
-      "quote": "excerpt under 25 words"
-    }}
-  ],
   "competitors_mentioned": ["exact competitor name"],
   "pricing_signals": [
     {{
       "sentiment": "positive|negative|neutral",
       "reason": "Price too high | Discounting required | Packaging concern | ROI question | Budget constraint | Pricing was fine",
-      "quote": "excerpt under 25 words"
+      "quote": "excerpt under 25 words or null"
     }}
   ],
   "loss_outcome_type": "competitive_loss | no_decision | price_budget | product_gap | timing | bad_fit | unknown",
@@ -320,11 +559,9 @@ Return JSON only. No preamble, no markdown:
 }}
 
 Rules:
-- features_mentioned: only features the PROSPECT asked about, reacted to, or cited as decisive
-  WON deals: features key to the decision | LOST deals: features that were missing, inadequate, or caused hesitation
-- competitors_mentioned: only if explicitly named by the prospect. Never infer
+- Do NOT include features_mentioned. Omit it entirely
+- competitors_mentioned: only if explicitly named. Never infer
 - pricing_signals: any mention of cost, budget, pricing concern, discounting, or packaging
-  Do NOT put pricing concerns in features_mentioned
 - loss_outcome_type: classify the primary reason the deal was lost:
     competitive_loss = prospect chose a named competitor
     no_decision     = prospect went dark, stalled, or chose to do nothing
@@ -334,44 +571,41 @@ Rules:
     bad_fit         = wrong use case, wrong size, wrong segment
     unknown         = notes don't give enough signal to classify
   (For WON deals, return null)
-- Use canonical Teachable feature names (e.g. "Custom Domain" not "white label domain")
 - If notes are too thin for a field, return an empty array or null. Do not guess
 - Return valid JSON only"""
 
 
-def extract_deal_signals(deal_id: str, outcome: str, amount: str,
-                         note_objects: list, cache: dict,
-                         client, deal_property_text: str = "") -> dict:
-    """Extract signals from deal notes. Uses cache keyed on note hash.
+def _build_supporting_notes_text(note_objects: list) -> str:
+    """Join engagement note bodies into a single text block."""
+    bodies = [n["body"] if isinstance(n, dict) else n for n in note_objects]
+    return "\n\n---\n\n".join(bodies)
 
-    note_objects: list of dicts with {note_id, createdate, body} or legacy list[str].
-    deal_property_text: structured deal properties prepended before notes.
-    """
-    note_hash = _note_hash(note_objects)
-    cache_key = f"{deal_id}:{note_hash}"
+
+def extract_deal_signals(deal_id: str, outcome: str, amount: str,
+                         feedback_notes: str, supporting_notes: str,
+                         cache: dict, client) -> dict:
+    """Extract competitor, pricing, and outcome signals. Features not extracted here."""
+    combined  = feedback_notes + "|||" + supporting_notes
+    note_hash = hashlib.sha256(combined.encode()).hexdigest()[:16]
+    cache_key = f"{deal_id}:signals:{note_hash}"
 
     if cache_key in cache:
         logger.debug("Cache hit: %s", deal_id)
         return cache[cache_key]
 
-    bodies = [n["body"] if isinstance(n, dict) else n for n in note_objects]
-    notes_text = "\n\n---\n\n".join(bodies)
-    # Prepend structured deal properties as primary signal source
-    if deal_property_text:
-        notes_text = deal_property_text + "\n\n" + notes_text
     prompt = EXTRACTION_PROMPT.format(
         outcome=outcome,
         amount=f"${float(amount):,.0f}" if amount else "unknown",
-        notes=notes_text,
+        feedback_notes=feedback_notes or "(none)",
+        supporting_notes=supporting_notes or "(none)",
     )
     response = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
+        max_tokens=512,
         messages=[{"role": "user", "content": prompt}],
     )
     try:
         raw_text = response.content[0].text
-        # Strip markdown code fences if present
         if raw_text.strip().startswith("```"):
             raw_text = re.sub(r'^```\w*\n?', '', raw_text.strip())
             raw_text = re.sub(r'\n?```$', '', raw_text.strip())
@@ -379,22 +613,21 @@ def extract_deal_signals(deal_id: str, outcome: str, amount: str,
     except (json.JSONDecodeError, IndexError) as e:
         logger.warning("Extraction parse error for deal %s: %s", deal_id, e)
         result = {
-            "features_mentioned": [], "competitors_mentioned": [],
-            "pricing_signals": [], "loss_outcome_type": None,
-            "win_reason": None, "loss_reason": None,
+            "competitors_mentioned": [], "pricing_signals": [],
+            "loss_outcome_type": "unknown", "win_reason": None, "loss_reason": None,
         }
 
-    result["_note_hash"] = note_hash
+    result.pop("features_mentioned", None)  # safety
+    result["_note_hash"]    = note_hash
     result["_extracted_at"] = datetime.now(UTC).isoformat()
-    result["_model"] = "claude-haiku-4-5-20251001"
+    result["_model"]        = "claude-haiku-4-5-20251001"
     cache[cache_key] = result
     return result
 
 
 def _has_signal(signals: dict) -> bool:
-    """Return True if Haiku returned any useful signal."""
+    """Return True if Haiku returned any useful signal (competitors/pricing/outcome)."""
     return bool(
-        signals.get("features_mentioned") or
         signals.get("competitors_mentioned") or
         signals.get("pricing_signals") or
         signals.get("win_reason") or
@@ -428,12 +661,7 @@ def _load_canonical_sets() -> tuple[set, set]:
 
 def _validate_extracted_signals(signals: dict, canonical_features: set,
                                 canonical_competitors: set) -> dict:
-    """Validate feature and competitor names. Unknown names get NEEDS_REVIEW."""
-    for feat in signals.get("features_mentioned", []):
-        name = feat.get("feature", "")
-        if name and name not in canonical_features:
-            feat["original_feature"] = name
-            feat["feature"] = "NEEDS_REVIEW"
+    """Validate competitor names. Unknown names get NEEDS_REVIEW."""
     validated_comps = []
     for comp in signals.get("competitors_mentioned", []):
         if comp and comp not in canonical_competitors:
@@ -678,25 +906,17 @@ def main():
     parser.add_argument("--signals-file", default=None, metavar="PATH",
                         help="Import pre-extracted signals from JSON (skips API extraction)")
     parser.add_argument("--api-extract", action="store_true",
-                        help="Use Anthropic API for extraction (requires ANTHROPIC_API_KEY)")
+                        help="Also use Anthropic API for AI extraction from feedback notes (optional, requires ANTHROPIC_API_KEY)")
     args = parser.parse_args()
 
-    # Fail-closed: require exactly one extraction mode before writing production output
-    modes = sum([args.dry_run, args.dump_notes is not None, args.signals_file is not None, args.api_extract])
-    if modes == 0:
-        # Auto-detect: if ANTHROPIC_API_KEY is set, use API extraction
+    # Default mode: HubSpot structured fields only (no Anthropic key needed).
+    # --api-extract optionally enhances with AI extraction from feedback notes.
+    # Auto-detect: if ANTHROPIC_API_KEY is set and no other mode specified, enable AI extraction
+    if not args.dry_run and args.dump_notes is None and args.signals_file is None and not args.api_extract:
         anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
         if anthropic_key:
             args.api_extract = True
-            logger.info("Auto-detected ANTHROPIC_API_KEY, enabling --api-extract")
-        else:
-            raise SystemExit(
-                "ERROR: No extraction mode specified. Use one of:\n"
-                "  --api-extract      (requires ANTHROPIC_API_KEY)\n"
-                "  --signals-file X   (pre-extracted signals JSON)\n"
-                "  --dump-notes X     (export notes for manual extraction)\n"
-                "  --dry-run          (coverage preview, no signals)"
-            )
+            logger.info("Auto-detected ANTHROPIC_API_KEY, enabling --api-extract for enhanced extraction")
 
     # Dry-run safety: don't overwrite production data with empty signals
     if args.dry_run:
@@ -708,10 +928,6 @@ def main():
     token = os.getenv("HUBSPOT_TOKEN", "")
     if not token:
         raise SystemExit("ERROR: HUBSPOT_TOKEN not set")
-
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
-    if args.api_extract and not anthropic_key:
-        raise SystemExit("ERROR: ANTHROPIC_API_KEY not set (required for --api-extract)")
 
     # Step 1: Get pipeline stages
     stage_map, pipelines = pull_hubspot_pipeline_stages(token)
@@ -736,11 +952,13 @@ def main():
     # Classify outcomes
     # Exclude all deals owned by excluded reps (non-sales roles, skew the data)
     EXCLUDE_OWNER_EMAILS = {"jerome.olaloye@teachable.com"}
+    ALLOWED_LEAD_SOURCES = {"inbound", "outbound", "referral"}
 
     classified_deals = []
     closed_won_fetched = 0
     closed_lost_fetched = 0
     excluded_by_owner = 0
+    excluded_by_lead_source = 0
     for raw_deal in raw_deals:
         props = raw_deal.get("properties", {})
         stage_id = props.get("dealstage", "")
@@ -749,6 +967,12 @@ def main():
         elif stage_id in lost_stage_set:
             outcome = "LOST"
         else:
+            continue
+
+        # Filter by lead source (only inbound, outbound, referral)
+        lead_source = (props.get("lead_source") or "").strip().lower()
+        if lead_source and lead_source not in ALLOWED_LEAD_SOURCES:
+            excluded_by_lead_source += 1
             continue
 
         # Check owner exclusion by email (deterministic, no name-parsing fragility)
@@ -767,6 +991,8 @@ def main():
             closed_lost_fetched += 1
         classified_deals.append((raw_deal, outcome))
 
+    if excluded_by_lead_source:
+        logger.info("Excluded %d deals (lead source not in %s)", excluded_by_lead_source, ALLOWED_LEAD_SOURCES)
     if excluded_by_owner:
         logger.info("Excluded %d deals (owner filter: %s)", excluded_by_owner, EXCLUDE_OWNER_EMAILS)
 
@@ -812,32 +1038,7 @@ def main():
         print(f"Dumped {len(dump)} deals with notes to {args.dump_notes}")
         return
 
-    # Load pre-extracted signals if provided
-    signals_lookup = {}
-    if args.signals_file:
-        with open(args.signals_file) as f:
-            signals_list = json.load(f)
-        for s in signals_list:
-            signals_lookup[s["deal_id"]] = s.get("signals", s)
-        logger.info("Loaded %d pre-extracted signals from %s", len(signals_lookup), args.signals_file)
-
-    # Step 5: Load cache + canonical data
-    cache = {}
-    if os.path.exists(CACHE_PATH):
-        with open(CACHE_PATH) as f:
-            cache = json.load(f)
-        logger.info("Loaded %d cached extractions", len(cache))
-
-    canonical_features, canonical_competitors = _load_canonical_sets()
-    logger.info("Canonical: %d features, %d competitors", len(canonical_features), len(canonical_competitors))
-
-    # Step 6: Initialize Anthropic client (only if --api-extract)
-    anthropic_client = None
-    if args.api_extract and not args.dry_run:
-        import anthropic
-        anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
-
-    # Step 7: Process each deal (only those with substantive notes)
+    # Step 5: Process each deal
     deals_output = []
     feature_signals = {"WON": {}, "LOST": {}}
     competitor_signals = {"WON": {}, "LOST": {}}
@@ -869,9 +1070,14 @@ def main():
         props = raw_deal.get("properties", {})
         amount, is_estimated = deal_amounts[did]
 
-        # Only process deals with substantive notes
-        notes = deal_notes.get(did)
-        if not notes:
+        # Substance gate: feedback notes OR substantive engagement notes
+        feedback_notes = _sanitize_note(props.get("notes_on_customer_feedback") or "")
+        eng_notes = deal_notes.get(did, [])
+        supporting_text = _build_supporting_notes_text(eng_notes) if eng_notes else ""
+        combined_text = feedback_notes + " " + supporting_text
+
+        if len(combined_text.strip()) < MIN_NOTE_CHARS \
+                and not _note_has_keyword_override(combined_text):
             continue
 
         # Owner email
@@ -887,36 +1093,14 @@ def main():
             except (ValueError, AttributeError):
                 closedate = closedate_raw[:10] if len(closedate_raw) >= 10 else closedate_raw
 
-        # Build structured property text (primary signal source when populated)
-        deal_prop_text = _build_deal_property_text(props)
+        # ── Feature gaps: from notes_on_customer_feedback only ─────────────
+        combined_features = _extract_features_from_notes(feedback_notes, outcome)
 
-        # Extraction
-        signals = {
-            "features_mentioned": [], "competitors_mentioned": [],
-            "pricing_signals": [], "loss_outcome_type": None,
-            "win_reason": None, "loss_reason": None,
-        }
-        note_hash = _note_hash(notes)
-        extracted_at = ""
-
-        if did in signals_lookup:
-            # Use pre-extracted signals (from --signals-file)
-            signals = signals_lookup[did]
-            signals = _validate_extracted_signals(signals, canonical_features, canonical_competitors)
-            extracted_at = signals.get("_extracted_at", datetime.now(UTC).isoformat())
-        elif anthropic_client:
-            signals = extract_deal_signals(did, outcome, str(amount) if amount else "",
-                                           notes, cache, anthropic_client,
-                                           deal_property_text=deal_prop_text)
-            signals = _validate_extracted_signals(signals, canonical_features, canonical_competitors)
-            note_hash = signals.get("_note_hash", note_hash)
-            extracted_at = signals.get("_extracted_at", "")
-
-        # Post-extraction gate: skip deals with no signal from rankings
-        has_extraction = bool(signals_lookup.get(did) or anthropic_client)
-        if has_extraction and not _has_signal(signals):
-            deals_no_signal += 1
-            continue
+        # ── Competitor / loss type from structured HubSpot fields ────────
+        comp_platform = (props.get("competitor_platform") or "").strip()
+        competitors_mentioned = [comp_platform] if comp_platform else []
+        loss_type_raw = (props.get("loss_type") or "").strip().lower().replace(" ", "_")
+        loss_outcome_type = loss_type_raw if loss_type_raw else ("unknown" if outcome == "LOST" else None)
 
         if outcome == "WON":
             analyzed_won += 1
@@ -928,8 +1112,8 @@ def main():
             else:
                 analyzed_value["lost_known"] += amount
 
-        # Accumulate feature signals
-        for feat in signals.get("features_mentioned", []):
+        # Accumulate feature signals (from close-time fields only)
+        for feat in combined_features:
             fname = feat.get("feature", "")
             if not fname:
                 continue
@@ -954,8 +1138,8 @@ def main():
             if did not in fs["deal_ids"]:
                 fs["deal_ids"].append(did)
 
-        # Accumulate competitor signals
-        for comp in signals.get("competitors_mentioned", []):
+        # Accumulate competitor signals (from structured HubSpot fields)
+        for comp in competitors_mentioned:
             if not comp:
                 continue
             if comp not in competitor_signals[outcome]:
@@ -983,33 +1167,30 @@ def main():
             "closedate": closedate,
             "pipeline": args.pipeline,
             "rep_email": rep_email,
+            "lead_source": props.get("lead_source"),
             "close_lost_reason_field": props.get("hs_closed_lost_reason"),
             "kb_or_pd_deal": props.get("kb_or_pd_deal"),
             "loss_type": props.get("loss_type"),
             "competitor_platform": props.get("competitor_platform"),
-            "has_structured_properties": bool(deal_prop_text),
-            "features_mentioned": signals.get("features_mentioned", []),
-            "competitors_mentioned": signals.get("competitors_mentioned", []),
-            "pricing_signals": signals.get("pricing_signals", []),
-            "loss_outcome_type": signals.get("loss_outcome_type"),
-            "win_reason": signals.get("win_reason"),
-            "loss_reason": signals.get("loss_reason"),
+            "notes_on_customer_feedback": feedback_notes,
+            "features_mentioned": combined_features,
+            "competitors_mentioned": competitors_mentioned,
+            "pricing_signals": [],
+            "loss_outcome_type": loss_outcome_type,
+            "win_reason": None,
+            "loss_reason": None,
             "notes": [{"note_id": n["note_id"], "createdate": n["createdate"]}
-                      for n in notes] if isinstance(notes[0], dict) else [],
-            "notes_count": len(notes),
-            "note_hash": note_hash,
-            "extracted_at": extracted_at,
+                      for n in eng_notes] if eng_notes and isinstance(eng_notes[0], dict) else [],
+            "notes_count": len(eng_notes),
         })
 
     # Build summary
     deals_with_substantive_notes = len(deal_notes)
     has_signal = bool(
         any(feature_signals[k] for k in feature_signals) or
-        any(competitor_signals[k] for k in competitor_signals) or
-        any(d.get("win_reason") or d.get("loss_reason") or d.get("pricing_signals")
-            for d in deals_output)
+        any(competitor_signals[k] for k in competitor_signals)
     )
-    extraction_status = "dry_run" if args.dry_run else ("extracted" if (anthropic_client or signals_lookup) else "not_run")
+    extraction_status = "dry_run" if args.dry_run else "structured_fields"
 
     summary = {
         "closed_won_fetched": closed_won_fetched,
@@ -1040,7 +1221,8 @@ def main():
         "generated_at": datetime.now(UTC).isoformat(),
         "window_days": args.days,
         "pipeline": args.pipeline,
-        "extraction_model": "claude-haiku-4-5-20251001",
+        "hubspot_portal_id": "50445500",
+        "extraction_model": "local_keyword_match",
         "extraction_status": extraction_status,
         "has_signal_data": has_signal,
         "dry_run": args.dry_run,
@@ -1070,11 +1252,6 @@ def main():
     with open(args.out, "w") as f:
         json.dump(output, f, indent=2)
     logger.info("Wrote %s (%d deals)", args.out, len(deals_output))
-
-    # Save cache
-    with open(CACHE_PATH, "w") as f:
-        json.dump(cache, f, indent=2)
-    logger.info("Cache saved (%d entries)", len(cache))
 
     # Print summary
     total_fetched = closed_won_fetched + closed_lost_fetched

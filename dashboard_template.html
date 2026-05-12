@@ -99,6 +99,35 @@ body {
 .tab:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
 .tab.active::after { opacity: 0; }
 
+/* Assumptions banner */
+.assumptions-bar {
+    display: flex; align-items: center; gap: 0.6rem;
+    background: rgba(74,108,247,0.05); border: 1px solid rgba(74,108,247,0.15);
+    border-radius: 8px; padding: 0.5rem 1rem; margin-bottom: 0.75rem;
+    font-size: 0.78rem; color: #8b8fa3; cursor: pointer;
+    transition: background 0.15s;
+}
+.assumptions-bar:hover { background: rgba(74,108,247,0.08); }
+.assumptions-bar-icon { font-size: 0.9rem; flex-shrink: 0; }
+.assumptions-bar-label { font-weight: 600; color: #a0a4b8; }
+.assumptions-bar-arrow {
+    margin-left: auto; font-size: 0.65rem; color: #5a5e72;
+    transition: transform 0.2s;
+}
+.assumptions-bar.open .assumptions-bar-arrow { transform: rotate(180deg); }
+.assumptions-body {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    background: rgba(74,108,247,0.03); border: 1px solid rgba(74,108,247,0.1);
+    border-radius: 8px; margin-bottom: 0.75rem; padding: 0 1rem;
+    font-size: 0.75rem; color: #8b8fa3; line-height: 1.6;
+}
+.assumptions-body.open { max-height: 400px; padding: 0.75rem 1rem; }
+.assumptions-body ul { margin: 0; padding-left: 1.2rem; }
+.assumptions-body li { margin-bottom: 0.35rem; }
+.assumptions-body li:last-child { margin-bottom: 0; }
+.assumptions-body strong { color: #a0a4b8; font-weight: 600; }
+
 /* Filter row */
 .filter-row {
     display: flex; align-items: center; gap: 0.6rem;
@@ -3529,6 +3558,7 @@ body {
     padding: 1.1rem 1.2rem;
     position: relative;
     overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     transition: border-color 0.15s;
 }
 .wl-kpi-card::before {
@@ -3560,6 +3590,14 @@ body {
 .wl-kpi-card--lost .wl-kpi-value { color: #f87171; }
 .wl-kpi-card--warn .wl-kpi-value { color: #f0c040; }
 .wl-kpi-sub { font-size: 0.72rem; color: #5a5e72; line-height: 1.35; }
+.wl-kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    border-color: #2a2e40;
+}
+.wl-kpi-card--won:hover  { border-color: rgba(52,211,153,0.25); box-shadow: 0 6px 20px rgba(52,211,153,0.08); }
+.wl-kpi-card--lost:hover { border-color: rgba(248,113,113,0.25); box-shadow: 0 6px 20px rgba(248,113,113,0.08); }
+.wl-kpi-card--warn:hover { border-color: rgba(240,192,64,0.25); box-shadow: 0 6px 20px rgba(240,192,64,0.08); }
 
 /* Section labels */
 .wl-section-label-new {
@@ -3574,7 +3612,7 @@ body {
     color: #5a5e72; font-size: 0.7rem; padding: 2px 9px;
     cursor: pointer; font-family: inherit; transition: all 0.12s;
 }
-.wl-sort-pill:hover { color: #c8cad4; border-color: #2a2e40; }
+.wl-sort-pill:hover { color: #c8cad4; border-color: #2a2e40; transform: translateY(-1px); }
 .wl-sort-pill.active { border-color: #4a6cf7; color: #7a9cff; background: rgba(74,108,247,0.06); }
 
 /* Feature Impact Matrix */
@@ -3586,6 +3624,24 @@ body {
     display: flex; align-items: center; justify-content: space-between;
     flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;
 }
+.wl-feature-search {
+    position: relative; display: flex; align-items: center;
+}
+.wl-feature-search-input {
+    background: #1a1d2e; border: 1px solid #2a2d40; border-radius: 6px;
+    padding: 0.35rem 0.6rem; font-size: 0.75rem; color: #c8cad2;
+    width: 180px; outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+}
+.wl-feature-search-input:focus { border-color: #4a7cff; }
+.wl-feature-search-input::placeholder { color: #4a4e62; }
+.wl-feature-search-clear {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #5a5e72; font-size: 0.9rem;
+    cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.wl-feature-search-clear:hover { color: #f87171; }
+
 .wl-matrix-legend-row {
     display: grid; grid-template-columns: 1fr auto 1fr;
     font-size: 0.66rem; color: #3a3e52;
@@ -3601,9 +3657,17 @@ body {
     gap: 0.75rem; align-items: center;
     padding: 0.5rem 0.25rem;
     border-radius: 8px; cursor: pointer;
-    transition: background 0.1s;
+    border-left: 2px solid transparent;
+    transition: background 0.15s ease, transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.wl-matrix-row:hover { background: rgba(255,255,255,0.025); }
+.wl-matrix-row:hover {
+    background: rgba(255,255,255,0.03);
+    transform: translateX(3px);
+    border-left-color: #4a7cff;
+    box-shadow: -2px 0 8px rgba(74,124,255,0.1);
+}
+.wl-matrix-row:hover .wl-bar-seg { filter: brightness(1.15); }
+.wl-matrix-row:hover .wl-feat-name { color: #f0f1f4; }
 .wl-matrix-left  { display: flex; flex-direction: column; gap: 3px; align-items: flex-end; }
 .wl-matrix-right { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
 .wl-matrix-center {
@@ -3621,7 +3685,7 @@ body {
 .wl-bar-wrap--lost .wl-bar-track { flex-direction: row-reverse; }
 .wl-bar-wrap--won  .wl-bar-track { flex-direction: row; }
 
-.wl-bar-seg { height: 100%; transition: width 0.35s ease; }
+.wl-bar-seg { height: 100%; transition: width 0.35s ease, filter 0.15s ease; }
 .wl-bar-seg--lost-known { background: #f87171; }
 .wl-bar-seg--lost-est   { background: rgba(248,113,113,0.35); }
 .wl-bar-seg--won-known  { background: #34d399; }
@@ -3658,10 +3722,14 @@ body {
 .wl-matrix-row:focus .wl-row-action {
     opacity: 1; border-color: rgba(74,108,247,0.45);
 }
-.wl-badge-gap      { background: rgba(248,113,113,0.12); color: #f87171; }
-.wl-badge-strength { background: rgba(52,211,153,0.12);  color: #34d399; }
-.wl-badge-stakes   { background: rgba(240,192,64,0.12);  color: #f0c040; }
-.wl-badge-watch    { background: rgba(100,116,139,0.12);  color: #64748b; }
+.wl-badge-gap      { background: rgba(248,113,113,0.12); color: #f87171; transition: transform 0.15s ease, background 0.15s ease; }
+.wl-badge-strength { background: rgba(52,211,153,0.12);  color: #34d399; transition: transform 0.15s ease, background 0.15s ease; }
+.wl-badge-stakes   { background: rgba(240,192,64,0.12);  color: #f0c040; transition: transform 0.15s ease, background 0.15s ease; }
+.wl-badge-watch    { background: rgba(100,116,139,0.12);  color: #64748b; transition: transform 0.15s ease, background 0.15s ease; }
+.wl-matrix-row:hover .wl-badge-gap      { background: rgba(248,113,113,0.2); transform: scale(1.05); }
+.wl-matrix-row:hover .wl-badge-strength { background: rgba(52,211,153,0.2);  transform: scale(1.05); }
+.wl-matrix-row:hover .wl-badge-stakes   { background: rgba(240,192,64,0.2);  transform: scale(1.05); }
+.wl-matrix-row:hover .wl-badge-watch    { background: rgba(100,116,139,0.2);  transform: scale(1.05); }
 
 /* Matrix empty state */
 .wl-matrix-empty {
@@ -3733,7 +3801,8 @@ body {
     border-color: #1e2130;
     outline: none;
 }
-.wl-donut-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.wl-donut-swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; transition: transform 0.15s ease; }
+.wl-donut-row:hover .wl-donut-swatch { transform: scale(1.3); }
 .wl-donut-type  { flex: 1; color: #c8cad4; }
 .wl-donut-count { color: #fff; font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 0.76rem; }
 .wl-donut-pct   { color: #5a5e72; font-size: 0.7rem; min-width: 2.5rem; text-align: right; }
@@ -3751,6 +3820,12 @@ body {
     border-radius: 14px; padding: 1.05rem 1.15rem 1rem;
     min-width: 0;
     box-shadow: 0 18px 44px rgba(0,0,0,0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.wl-pie-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 48px rgba(0,0,0,0.25);
+    border-color: #3a3e52;
 }
 .wl-pie-card .wl-section-label-new { text-align: center; margin-bottom: 0.25rem; }
 .wl-pie-card .wl-donut-wrap { gap: 0.75rem; }
@@ -3765,6 +3840,12 @@ body {
     padding: 1.35rem 1.55rem;
     margin-bottom: 0.9rem;
     box-shadow: 0 22px 54px rgba(0,0,0,0.22);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.wl-feature-cost-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 26px 58px rgba(0,0,0,0.3);
+    border-color: #3a4058;
 }
 .wl-feature-cost-head {
     display: flex; align-items: baseline; justify-content: space-between;
@@ -3790,6 +3871,13 @@ body {
 .wl-feature-cost-card .wl-donut-row {
     padding: 7px 8px; border-color: rgba(255,255,255,0.02);
     background: rgba(12,14,21,0.24);
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.wl-feature-cost-card .wl-donut-row:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: #2a2e40;
+    transform: translateX(3px);
+    box-shadow: -2px 0 6px rgba(248,113,113,0.08);
 }
 .wl-feature-cost-card .wl-donut-type { font-size: 0.82rem; font-weight: 700; }
 .wl-feature-cost-card .wl-donut-count { font-size: 0.82rem; }
@@ -3939,6 +4027,12 @@ body {
 .wl-source-card {
     background: #14161e; border: 1px solid #1e2130;
     border-radius: 9px; padding: 0.75rem 0.85rem;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.wl-source-card:hover {
+    transform: translateY(-1px);
+    border-color: #2a2e40;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 .wl-source-card--mention {
     background: rgba(20,22,30,0.72);
@@ -3971,10 +4065,12 @@ body {
 .wl-deal-summary {
     display: flex; align-items: center; justify-content: space-between;
     padding: 0.65rem 1.5rem; cursor: pointer; gap: 1rem;
-    list-style: none; transition: background 0.1s;
+    list-style: none; transition: background 0.15s ease, padding-left 0.15s ease;
 }
 .wl-deal-summary::-webkit-details-marker { display: none; }
-.wl-deal-summary:hover { background: rgba(255,255,255,0.02); }
+.wl-deal-summary:hover { background: rgba(255,255,255,0.03); padding-left: 1.75rem; }
+.wl-deal-summary:hover .wl-deal-dot { transform: scale(1.4); }
+.wl-deal-dot { transition: transform 0.15s ease; }
 .wl-deal-summary-left  { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
 .wl-deal-summary-right { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; font-size: 0.75rem; color: #5a5e72; font-family: 'JetBrains Mono', monospace; }
 
@@ -4027,6 +4123,23 @@ body {
 }
 .wl-legend-swatch--known { background: #f87171; }
 .wl-legend-swatch--est   { background: rgba(240,192,64,0.35); border: 1px solid rgba(240,192,64,0.2); }
+
+/* Feature pills in deal drawer */
+.wl-deal-feats { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 0.5rem; }
+.wl-feat-pill { font-size: 0.68rem; padding: 2px 8px; border-radius: 4px; font-weight: 600; cursor: default; }
+.wl-feat-pill--structured { background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.2); }
+.wl-feat-pill--notes {
+    background: rgba(74,108,247,0.1); color: #7a9cff; border: 1px solid rgba(74,108,247,0.2);
+    transition: transform 0.12s ease, background 0.12s ease;
+}
+.wl-feat-pill--notes:hover { transform: translateY(-1px); background: rgba(74,108,247,0.18); }
+.wl-deal-link { color: inherit; text-decoration: none; }
+.wl-deal-link:hover { color: #4a7cff; text-decoration: underline; }
+.wl-deal-feedback-quote {
+    font-size: 0.75rem; color: #8b8fa3; font-style: italic;
+    border-left: 2px solid #2a2e40; padding: 0.3rem 0.75rem;
+    margin: 0.4rem 0; line-height: 1.45;
+}
 
 /* Responsive */
 @media (max-width: 780px) {
@@ -4245,6 +4358,24 @@ body {
         <div class="tab" data-tab="prospecting" data-tooltip="Target accounts and outreach signals" onclick="switchTab('prospecting')">Prospecting <svg class="tab-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
         <div class="tab" data-tab="performance" data-tooltip="Rep and pipeline performance metrics" onclick="switchTab('performance')">Performance</div>
         <div class="tab" data-tab="winloss" data-tooltip="Win/loss analysis with revenue-weighted signals" onclick="switchTab('winloss')">Win/Loss</div>
+    </div>
+    <div class="assumptions-bar" id="assumptions-bar" onclick="toggleAssumptions()">
+        <span class="assumptions-bar-icon">&#9432;</span>
+        <span class="assumptions-bar-label">Assumptions &amp; Methodology</span>
+        <span style="color:#5a5e72">Click to expand</span>
+        <span class="assumptions-bar-arrow">&#9660;</span>
+    </div>
+    <div class="assumptions-body" id="assumptions-body">
+        <ul>
+            <li><strong>AI extraction:</strong> All feature mentions, sentiment, and signals are extracted by Claude from call transcripts. Accuracy depends on transcript quality and model interpretation.</li>
+            <li><strong>Transcript source:</strong> Recordings come from Fireflies.ai. Calls without recordings or with poor audio are excluded automatically.</li>
+            <li><strong>Sentiment is directional:</strong> Positive/negative/neutral labels reflect tone in context, not objective product quality. A "negative" mention may be constructive feedback.</li>
+            <li><strong>Win/Loss values are associative, not causal:</strong> Dollar figures show the combined value of deals where a signal appeared. They do not prove the signal caused the outcome.</li>
+            <li><strong>Estimated values use median backfill:</strong> Deals missing an amount are estimated from the median of their pipeline stage. Marked with ~ throughout.</li>
+            <li><strong>Persona classification is inferred:</strong> Buyer personas are assigned by AI based on title, language, and context. They are not CRM-verified.</li>
+            <li><strong>Competitor mentions are not endorsements:</strong> A prospect mentioning a competitor does not confirm they are using or evaluating that product.</li>
+            <li><strong>Performance metrics lag:</strong> HubSpot and Mixmax data syncs periodically. Recent activity may not yet be reflected.</li>
+        </ul>
     </div>
     <div class="filter-row" id="filter-row">
         <div class="search-box"><input id="q" placeholder="Search..." oninput="filter(this.value)"><span class="search-result-count" id="search-result-count"></span><button class="search-clear" id="search-clear" onclick="clearSearch()" style="display:none">&times;</button></div>
@@ -7551,6 +7682,11 @@ function syncCompanyLabel() {
         label.textContent = activeCompanyFilters.size + ' selected';
         btn.classList.add('has-filter');
     }
+}
+
+function toggleAssumptions() {
+    document.getElementById('assumptions-bar').classList.toggle('open');
+    document.getElementById('assumptions-body').classList.toggle('open');
 }
 
 function toggleDD(id) {
@@ -12740,6 +12876,12 @@ function buildWinLoss() {
             html += '<button class="wl-sort-pill' + (sortKey === pair[0] ? ' active' : '') + '" onclick="window._wlSortKey=\'' + pair[0] + '\';window._wlMatrixExpanded=false;buildWinLoss()">' + pair[1] + '</button>';
         });
         html += '</div>';
+        var featureQuery = window._wlFeatureQuery || '';
+        html += '<div class="wl-feature-search">' +
+            '<input class="wl-feature-search-input" type="text" placeholder="Search features..." value="' + esc(featureQuery) + '" ' +
+                'oninput="window._wlFeatureQuery=this.value;buildWinLoss()" />' +
+            (featureQuery ? '<button class="wl-feature-search-clear" onclick="window._wlFeatureQuery=\'\';buildWinLoss()">&times;</button>' : '') +
+        '</div>';
     }
     html += '</div>';
 
@@ -12761,8 +12903,12 @@ function buildWinLoss() {
             '<code class="wl-null-cmd" style="margin-top:0.75rem">python3 fetch_lost_deals.py --days 180 --out test_output/win_loss.json</code>' +
         '</div>';
     } else {
+        // Filter rows by search query
+        var fq = (window._wlFeatureQuery || '').toLowerCase();
+        var filtered = fq ? rows.filter(function(r){ return r.feature.toLowerCase().indexOf(fq) !== -1; }) : rows;
+
         // Sort rows based on selected key
-        var sorted = rows.slice().sort(function(a, b) {
+        var sorted = filtered.slice().sort(function(a, b) {
             if (sortKey === 'win_drivers')  return (b.won_known_value + b.won_estimated_value) - (a.won_known_value + a.won_estimated_value);
             if (sortKey === 'deal_count')   return (b.won_deal_count + b.lost_deal_count) - (a.won_deal_count + a.lost_deal_count);
             if (sortKey === 'table_stakes') return (b.classification === 'TABLE_STAKES' ? 1 : 0) - (a.classification === 'TABLE_STAKES' ? 1 : 0);
@@ -13048,11 +13194,14 @@ function buildWinLoss() {
                     var comps  = (d.competitors_mentioned || []);
                     var pricing = (d.pricing_signals     || []);
 
+                    var portalId = WIN_LOSS.hubspot_portal_id || '50445500';
+                    var hsLink = 'https://app.hubspot.com/contacts/' + portalId + '/deal/' + d.id;
+
                     html += '<details class="wl-deal-item"' + (hasEvidenceFilter && idx < 3 ? ' open' : '') + '>' +
                         '<summary class="wl-deal-summary">' +
                             '<div class="wl-deal-summary-left">' +
                                 '<span class="wl-deal-dot wl-deal-dot--' + d.outcome.toLowerCase() + '"></span>' +
-                                '<span class="wl-deal-name">' + esc(name) + '</span>' +
+                                '<a href="' + hsLink + '" target="_blank" rel="noopener" class="wl-deal-name wl-deal-link" onclick="event.stopPropagation()" title="Open in HubSpot">' + esc(name) + ' &#8599;</a>' +
                                 (d.loss_outcome_type && d.outcome === 'LOST' && d.loss_outcome_type !== 'unknown'
                                     ? '<span class="wl-outcome-tag">' + esc(d.loss_outcome_type.replace(/_/g,' ')) + '</span>' : '') +
                             '</div>' +
@@ -13067,13 +13216,20 @@ function buildWinLoss() {
                     if (d.win_reason)  html += '<div class="wl-deal-reason wl-deal-reason--won">&uarr; ' + esc(d.win_reason) + '</div>';
                     if (d.loss_reason) html += '<div class="wl-deal-reason wl-deal-reason--lost">&darr; ' + esc(d.loss_reason) + '</div>';
 
-                    feats.forEach(function(f) {
-                        html += '<div class="wl-deal-feat">' +
-                            '<span class="wl-deal-feat-name">' + esc(f.feature) + '</span>' +
-                            '<span class="wl-deal-feat-sent wl-sent-' + (f.sentiment || 'neutral') + '">' + (f.sentiment || '') + '</span>' +
-                            (f.quote ? '<span class="wl-deal-quote-text">"' + esc(f.quote) + '"</span>' : '') +
-                        '</div>';
-                    });
+                    // Feature pills from customer feedback notes
+                    if (feats.length > 0) {
+                        html += '<div class="wl-deal-feats">';
+                        feats.forEach(function(f) {
+                            var tip = f.quote ? ' title="' + esc(f.quote) + '"' : '';
+                            html += '<span class="wl-feat-pill wl-feat-pill--notes"' + tip + '>' + esc(f.feature) + '</span>';
+                        });
+                        html += '</div>';
+                    }
+
+                    // Customer feedback notes verbatim
+                    if (d.notes_on_customer_feedback) {
+                        html += '<blockquote class="wl-deal-feedback-quote">"' + esc(d.notes_on_customer_feedback) + '"</blockquote>';
+                    }
 
                     pricing.forEach(function(ps) {
                         if (typeof ps === 'object') {
