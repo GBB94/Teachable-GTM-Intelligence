@@ -5687,7 +5687,7 @@ function parseHash() {
             p.slice(8).split(',').filter(Boolean).forEach(id => excludedCalls.add(id));
         } else if (p.startsWith('range=')) {
             activeDateRange = p.slice(6);
-        } else if (['features', 'calls', 'personas', 'competitors', 'reports', 'prospecting', 'performance', 'winloss'].includes(p)) {
+        } else if (['features', 'calls', 'personas', 'competitors', 'reports', 'prospecting', 'performance', 'winloss', 'mydeals'].includes(p)) {
             tab = p;
         } else if (['overview', 'pipeline', 'reps', 'activity'].includes(p)) {
             _perfActiveView = p;
