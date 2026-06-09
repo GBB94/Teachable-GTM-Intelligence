@@ -37,9 +37,10 @@ MIXMAX_RECORD_CAP = 5000
 def collect_mixmax_tokens() -> list[tuple[str, str]]:
     """Return list of (email, token) for all configured Mixmax tokens."""
     candidates = [
-        ("zach.mccall@teachable.com",   os.getenv("MIXMAX_API_TOKEN", "")),
-        ("jerome.olaloye@teachable.com", os.getenv("MIXMAX_API_TOKEN_JEROME", "")),
-        ("kevin.codde@teachable.com",    os.getenv("MIXMAX_API_TOKEN_KEVIN", "")),
+        ("zach.mccall@teachable.com",      os.getenv("MIXMAX_API_TOKEN", "")),
+        ("kevin.codde@teachable.com",     os.getenv("MIXMAX_API_TOKEN_KEVIN", "")),
+        ("marcelle.pipolo@teachable.com", os.getenv("MIXMAX_API_TOKEN_MARCELLE", "")),
+        ("amanda.araujo@teachable.com",   os.getenv("MIXMAX_API_TOKEN_AMANDA", "")),
     ]
     return [(email, token) for email, token in candidates if token.strip()]
 
@@ -47,17 +48,20 @@ def collect_mixmax_tokens() -> list[tuple[str, str]]:
 # Internal reps — canonical emails and speaker name mapping
 INTERNAL_REP_EMAILS = {
     "zach.mccall@teachable.com",
-    "jerome.olaloye@teachable.com",
     "kevin.codde@teachable.com",
+    "marcelle.pipolo@teachable.com",
+    "amanda.araujo@teachable.com",
 }
 
 SPEAKER_NAME_TO_EMAIL = {
     "zach mccall": "zach.mccall@teachable.com",
     "zach": "zach.mccall@teachable.com",
-    "jerome olaloye": "jerome.olaloye@teachable.com",
-    "jerome": "jerome.olaloye@teachable.com",
     "kevin codde": "kevin.codde@teachable.com",
     "kevin": "kevin.codde@teachable.com",
+    "marcelle pipolo": "marcelle.pipolo@teachable.com",
+    "marcelle": "marcelle.pipolo@teachable.com",
+    "amanda araujo": "amanda.araujo@teachable.com",
+    "amanda": "amanda.araujo@teachable.com",
 }
 
 INTERNAL_SPEAKER_NAMES = set(SPEAKER_NAME_TO_EMAIL.keys()) | {
@@ -161,7 +165,7 @@ def pull_fireflies_calls(api_key: str, since: datetime, until: datetime) -> list
         days_back=days_back,
         limit=500,
         title_keywords=["teachable", "followup", "follow-up", "follow up",
-                         "zach mccall", "jerome olaloye", "kevin codde"],
+                         "zach mccall", "kevin codde", "marcelle pipolo", "amanda araujo"],
         owner_emails=list(INTERNAL_REP_EMAILS),
         bypass_keywords_owners=["kevin.codde"],
     )

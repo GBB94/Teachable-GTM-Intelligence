@@ -1,5 +1,5 @@
 {
-  "month": "2026-04",
+  "month": "2026-06",
   "_note": "Update 'month' and targets at start of each month. Commit and push to take effect on next sync.",
   "targets": [
     {
@@ -10,14 +10,21 @@
       "emails_sent": 200
     },
     {
-      "rep_email": "jerome.olaloye@teachable.com",
+      "rep_email": "kevin.codde@teachable.com",
       "meetings_booked": 10,
-      "deals_created": 25,
+      "deals_created": 20,
       "recorded_calls": 20,
       "emails_sent": 150
     },
     {
-      "rep_email": "kevin.codde@teachable.com",
+      "rep_email": "marcelle.pipolo@teachable.com",
+      "meetings_booked": 10,
+      "deals_created": 20,
+      "recorded_calls": 20,
+      "emails_sent": 150
+    },
+    {
+      "rep_email": "amanda.araujo@teachable.com",
       "meetings_booked": 10,
       "deals_created": 20,
       "recorded_calls": 20,

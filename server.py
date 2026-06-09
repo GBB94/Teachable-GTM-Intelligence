@@ -41,12 +41,12 @@ from lib.scan_ledger import (
 # Config
 # ---------------------------------------------------------------------------
 SCAN_DAYS = 14
-SCAN_LIMIT = 50
+SCAN_LIMIT = 200
 SCAN_TITLE_KEYWORDS = DEFAULT_SCAN_TITLE_KEYWORDS
-SCAN_OWNERS = ['zach.mccall', 'jerome.olaloye', 'kevin.codde']
+SCAN_OWNERS = ['zach.mccall', 'kevin.codde', 'marcelle.pipolo', 'amanda.araujo']
 SCAN_EXCLUDE_DOMAINS = ['teachable.com']
 # Owners whose solo calls (no other team member present) should be excluded from scans
-SCAN_SOLO_EXCLUDE = ['jerome.olaloye']
+SCAN_SOLO_EXCLUDE = ['marcelle.pipolo', 'amanda.araujo']
 PORT = 8080
 
 TEMPLATE_PATH = os.path.join(REPO_DIR, 'dashboard_template.html')
@@ -248,11 +248,19 @@ def scan_preview():
         if last_scan_dt is not None:
             from datetime import timedelta
             delta_days = (datetime.now(timezone.utc) - last_scan_dt).days
-            # Add 1-day buffer to avoid edge-case gaps; minimum 2 days, no upper cap
-            # so we always cover the full window since the last scan
             effective_days = max(2, delta_days + 1)
         else:
-            effective_days = SCAN_DAYS
+            # No ledger — scan from the most recent call in the dashboard
+            from datetime import timedelta
+            call_dates = [c.get("date", "") for c in existing_data.get("calls", []) if c.get("date")]
+            if call_dates:
+                newest = max(call_dates)  # "YYYY-MM-DD" string
+                newest_dt = datetime.fromisoformat(newest + "T00:00:00+00:00")
+                delta_days = (datetime.now(timezone.utc) - newest_dt).days
+                effective_days = max(2, delta_days + 1)
+                print(f"[preview] No scan ledger — using newest call date {newest} ({delta_days}d ago)")
+            else:
+                effective_days = SCAN_DAYS
 
         # after_date for early pagination exit
         from datetime import timedelta

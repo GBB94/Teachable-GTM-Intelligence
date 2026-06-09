@@ -317,7 +317,14 @@ _FEATURE_KEYWORD_MAP = {
     "embedding questions into videos": "Interactive Video",
     "questions into videos": "Interactive Video",
     "quiz question types": "Quiz Question Types",
+    "question bank": "Question Bank",
+    "question banks": "Question Bank",
+    "randomization": "Question Bank",
     "question/answer types": "Quiz Question Types",
+    "adaptive quiz feedback": "Quiz-Based Routing & Enrollment",
+    "content redirection": "Quiz-Based Routing & Enrollment",
+    "directed back to the specific section": "Quiz-Based Routing & Enrollment",
+    "second chance": "Quiz-Based Routing & Enrollment",
     "technical assessments": "Quiz / Assessment Builder",
     "technical assessment": "Quiz / Assessment Builder",
     "one attempt only": "Quiz / Assessment Builder",
@@ -1058,7 +1065,7 @@ def main():
 
     # Classify outcomes
     # Exclude all deals owned by excluded reps (non-sales roles, skew the data)
-    EXCLUDE_OWNER_EMAILS = {"jerome.olaloye@teachable.com"}
+    EXCLUDE_OWNER_EMAILS = set()  # add rep emails here to exclude from analysis
     EXCLUDE_DEAL_NAMES = {"edge factor"}  # outlier accounts that skew the data
     ALLOWED_LEAD_SOURCES = {"inbound", "outbound", "referral"}
 

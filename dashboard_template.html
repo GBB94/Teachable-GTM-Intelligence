@@ -4318,6 +4318,31 @@ body {
     border-radius: 999px;
     padding: 4px 9px;
 }
+.md-feature-mention-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.md-feature-mention {
+    border: 1px solid rgba(255,255,255,0.055);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.025);
+    padding: 0.55rem 0.6rem;
+}
+.md-feature-mention-head {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.md-feature-mention-meta {
+    color: #6b7084;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.md-feature-mention-quote {
+    color: #9ca3af;
+    font-size: 0.74rem;
+    line-height: 1.45;
+    margin-top: 0.38rem;
+}
 .md-note-comp {
     font-size: 0.72rem;
     color: #f6d989;
@@ -4831,8 +4856,9 @@ let _perfTrendShow = { meetings: false, deals_created: false, emails: true, call
 let _perfActiveStagePopover = null;
 const _PERF_DEFAULT_REPS = new Set([
     'zach.mccall@teachable.com',
-    'jerome.olaloye@teachable.com',
     'kevin.codde@teachable.com',
+    'marcelle.pipolo@teachable.com',
+    'amanda.araujo@teachable.com',
 ]);
 let _perfActiveReps = new Set(_PERF_DEFAULT_REPS);
 // Derived: single rep when exactly 1 selected, null otherwise (backward compat)
@@ -6036,7 +6062,8 @@ function isTeachableInternal(name) {
 const INTERNAL_PERSON_NAMES = new Set([
     'zach mccall', 'zach',
     'kevin codde', 'kevin',
-    'jerome olaloye', 'jerome',
+    'marcelle pipolo', 'marcelle',
+    'amanda araujo', 'amanda',
     'anna damico',
     'ben vincent',
     'lennie zhu', 'lennie',
@@ -6729,7 +6756,7 @@ function buildFeatures() {
     buildCompanyDropdown(allCompanies);
 
     // Build feature data objects
-    const INTERNAL_SPEAKERS = ['zach mccall', 'kevin', 'kevin codde', 'jerome', 'jerome olaloye', 'lennie zhu', 'sarah'];
+    const INTERNAL_SPEAKERS = ['zach mccall', 'kevin', 'kevin codde', 'marcelle', 'marcelle pipolo', 'amanda', 'amanda araujo', 'lennie zhu', 'sarah'];
     const allCategories = new Set();
 
     Object.entries(featureGroups).forEach(([kw, data]) => {
@@ -8292,7 +8319,7 @@ let _analyzeStep = 1;
 let _analyzeCCCommand = '';
 
 const _INTERNAL_SPEAKERS = new Set([
-    'zach mccall', 'kevin codde', 'jerome olaloye',
+    'zach mccall', 'kevin codde', 'marcelle pipolo', 'amanda araujo',
     'lennie zhu', 'sarah dean', 'jonathan corvin-blackburn',
     'jonathan corvin blackburn', 'luke easley'
 ]);
@@ -8333,7 +8360,7 @@ function _triageCalls() {
         // Title signals for prospect calls — internal calls won't have "teachable" in the name
         const title = c.title || '';
         const titleLower = title.toLowerCase();
-        const _REP_NAMES = ['zach mccall', 'jerome olaloye', 'kevin codde'];
+        const _REP_NAMES = ['zach mccall', 'kevin codde', 'marcelle pipolo', 'amanda araujo'];
         const hasProspectTitle = titleLower.includes('teachable')
             || _REP_NAMES.some(n => titleLower.includes(n));
 
@@ -13185,6 +13212,19 @@ function _mdFeedbackFeatures(d) {
     });
 }
 
+function _mdAllFeatureMentions(d) {
+    return (d.features_mentioned || []).map(function(f) {
+        var name = _mdFeatureName(f);
+        if (!name || name === 'NEEDS_REVIEW') return null;
+        return {
+            name: name,
+            sentiment: typeof f === 'object' ? (f.sentiment || '') : '',
+            source: typeof f === 'object' ? (f.source || '') : '',
+            quote: typeof f === 'object' ? (f.quote || '') : ''
+        };
+    }).filter(Boolean);
+}
+
 function _mdHasProductLimitationMarker(d) {
     var hubspotReason = (d.hubspot_loss_reason || '').toLowerCase();
     if (hubspotReason === 'product limitation') return true;
@@ -13344,6 +13384,7 @@ function buildMyDeals() {
         var hubspotLossReason = d.hubspot_loss_reason || '';
         var lossReason = d.loss_reason || d.close_lost_reason_field || '';
         var features = _mdFeedbackFeatures(d);
+        var allFeatureMentions = _mdAllFeatureMentions(d);
         var competitors = (d.competitors_mentioned || []).filter(function(c) { return c && c !== 'Not Applicable'; });
         var lossType = d.loss_type || '';
         var lossCat = _mdGetLossCategory(d);
@@ -13409,6 +13450,23 @@ function buildMyDeals() {
             html += '</div>';
         } else {
             html += '<div class="md-note-side-value md-note-empty">No feature signal extracted from this note.</div>';
+        }
+        html += '</div>';
+        html += '<div class="md-note-side-block"><div class="md-note-side-label">All feature mentions</div>';
+        if (allFeatureMentions.length > 0) {
+            html += '<div class="md-feature-mention-list">';
+            allFeatureMentions.forEach(function(fm) {
+                html += '<div class="md-feature-mention">';
+                html += '<div class="md-feature-mention-head">';
+                html += '<span class="md-note-feature">' + esc(fm.name) + '</span>';
+                if (fm.sentiment) html += '<span class="md-feature-mention-meta">' + esc(fm.sentiment) + '</span>';
+                html += '</div>';
+                if (fm.quote) html += '<div class="md-feature-mention-quote">"' + esc(fm.quote) + '"</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+        } else {
+            html += '<div class="md-note-side-value md-note-empty">No feature mentions captured for this deal.</div>';
         }
         html += '</div>';
         if (competitors.length > 0) {
