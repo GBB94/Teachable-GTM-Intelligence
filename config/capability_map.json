@@ -2,8 +2,8 @@
   "version": 2,
   "source": "Teachable_Platform_Expert_Skill.md",
   "source_date": "2026-02",
-  "last_generated": "2026-02-24T00:00:00Z",
-  "feature_count": 197,
+  "last_generated": "2026-06-11T16:16:31.176999Z",
+  "feature_count": 227,
   "mapping": {
     "AI Chatbot / Support Bot": {
       "tier": "gap",
@@ -1775,6 +1775,276 @@
       "expert_ref": "Zapier (Builder+)",
       "coverage_notes": "Zapier integration on Builder+ plans. Trigger enrollment via Zap from external events (Shopify purchase, form submission, etc.).",
       "confidence": "high",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Live Sessions": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Native coaching product with live session support",
+      "coverage_notes": "Alias of \"Live Coaching Sessions\" from extracted sales-call taxonomy. Native coaching product type supports live sessions. Coaching milestones for scheduling and delivery.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "White Label": {
+      "tier": "native",
+      "plan_required": "Growth",
+      "expert_ref": "White Label (Growth+)",
+      "coverage_notes": "Alias of \"White Label Platform\" from extracted sales-call taxonomy. Remove Teachable branding on Growth+ plans. Custom domain on all plans.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Custom Domain": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Custom Domain + Design",
+      "coverage_notes": "Alias of \"Custom Branding\" from extracted sales-call taxonomy. Custom domain, logo, colors, page builder. CSS snippets for advanced styling. White-label (remove Teachable branding) on Growth+.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Coupon / Discount Codes": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Coupons",
+      "coverage_notes": "Alias of \"Custom Coupon Codes\" from extracted sales-call taxonomy. Custom coupon codes with percentage or fixed discount, expiry dates, usage limits. Available on all plans.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Zapier Integration": {
+      "tier": "native",
+      "plan_required": "Builder",
+      "expert_ref": "Zapier (Builder+)",
+      "coverage_notes": "Alias of \"Zapier Integration for Enrollment\" from extracted sales-call taxonomy. Zapier integration on Builder+ plans. Trigger enrollment via Zap from external events (Shopify purchase, form submission, etc.).",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Student Custom Fields / Onboarding": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Custom Registration Fields",
+      "coverage_notes": "Alias of \"Custom Registration Fields\" from extracted sales-call taxonomy. Add custom fields to enrollment forms. Text, dropdown, checkbox types. Data accessible in admin and exports.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "White Label Mobile App": {
+      "tier": "gap",
+      "plan_required": null,
+      "expert_ref": "Mobile Apps \u2014 not white-labeled",
+      "coverage_notes": "Alias of \"White-Label Mobile App\" from extracted sales-call taxonomy. Teachable mobile app is branded as Teachable. No white-label mobile app with custom branding/app store listing.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Organizations & Multi-tenancy": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Multi-school Support",
+      "coverage_notes": "Alias of \"Organizations / Multi-tenancy\" from extracted sales-call taxonomy. Multiple separate schools per account (multi-tenancy at school level). Not org-level tenancy within a single school \u2014 that's B2B beta.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Group Enrollment": {
+      "tier": "roadmap",
+      "plan_required": null,
+      "expert_ref": "B2B Bulk Distribution (beta)",
+      "coverage_notes": "Alias of \"Organizations & Group Enrollment\" from extracted sales-call taxonomy. B2B Bulk Distribution in closed beta (2026). Includes org-level enrollment and seat management. Currently: bulk import (Growth+) or API.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "SSO (Single Sign-On)": {
+      "tier": "native",
+      "plan_required": "Builder",
+      "expert_ref": "Google SSO (Builder+)",
+      "coverage_notes": "Alias of \"Single Sign-On (SSO)\" from extracted sales-call taxonomy. Google SSO on Builder+. No SAML, Okta, Azure AD, or enterprise SSO. Limited to Google as the only SSO provider.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Digital Downloads": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Digital Downloads + Course Content",
+      "coverage_notes": "Alias of \"PDF / Digital Downloads in Courses\" from extracted sales-call taxonomy. PDFs as course lesson content and as standalone digital download products. All plans.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Self-enrollment via Link": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Course Visibility + Enrollment",
+      "coverage_notes": "Alias of \"Registration Gating\" from extracted sales-call taxonomy. Courses require enrollment to access. Can gate by payment, free enrollment, or direct link. No prerequisites between courses natively.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Reporting & Analytics Dashboard": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Reports & Analytics",
+      "coverage_notes": "Alias of \"Reporting Dashboard\" from extracted sales-call taxonomy. Built-in reporting dashboard with revenue, enrollment, and completion metrics. No custom dashboard builder or advanced analytics.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Custom Registration Questions": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Custom Registration Fields",
+      "coverage_notes": "Alias of \"Custom Registration Fields\" from extracted sales-call taxonomy. Add custom fields to enrollment forms. Text, dropdown, checkbox types. Data accessible in admin and exports.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Custom Branding / White Label": {
+      "tier": "native",
+      "plan_required": "Growth",
+      "expert_ref": "White Label (Growth+)",
+      "coverage_notes": "Alias of \"Custom Branding / White-label\" from extracted sales-call taxonomy. Full white-label (remove Teachable branding) on Growth+. Custom domain on all plans. Custom CSS on all plans.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "API Access": {
+      "tier": "native",
+      "plan_required": "Growth",
+      "expert_ref": "API (Growth+)",
+      "coverage_notes": "Alias of \"Headless / API Access\" from extracted sales-call taxonomy. REST API on Growth+ plans. Students, courses, enrollments, and transactions endpoints. Not a full headless CMS \u2014 no content delivery API.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Reporting & Analytics": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Reports & Analytics",
+      "coverage_notes": "Alias of \"Reporting Dashboard\" from extracted sales-call taxonomy. Built-in reporting dashboard with revenue, enrollment, and completion metrics. No custom dashboard builder or advanced analytics.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Assessments & Quizzes": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Quizzes & Assessments",
+      "coverage_notes": "Alias of \"Quiz / Assessment Builder\" from extracted sales-call taxonomy. Quiz builder with multiple choice and short answer. AI quiz generator. No question banks, timed quizzes, or randomization.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Quizzes and Testing": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Quizzes & Assessments",
+      "coverage_notes": "Alias of \"Quiz / Assessment Builder\" from extracted sales-call taxonomy. Quiz builder with multiple choice and short answer. AI quiz generator. No question banks, timed quizzes, or randomization.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Course Embedding": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Courses can be integrated into existing website",
+      "coverage_notes": "Alias of \"Course Embedding on External Website\" from extracted sales-call taxonomy. Courses can be integrated into an existing website. Custom domain for seamless branding. WordPress plugin available for direct embedding.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Bulk Student Enrollment / Group Management": {
+      "tier": "roadmap",
+      "plan_required": null,
+      "expert_ref": "B2B Bulk Distribution (beta)",
+      "coverage_notes": "Alias of \"Organizations & Group Enrollment\" from extracted sales-call taxonomy. B2B Bulk Distribution in closed beta (2026). Includes org-level enrollment and seat management. Currently: bulk import (Growth+) or API.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "SSO / SAML Integration": {
+      "tier": "native",
+      "plan_required": "Builder+",
+      "expert_ref": "Google SSO available Builder+. SAML/enterprise SSO not supported.",
+      "coverage_notes": "Alias of \"SSO / SAML\" from extracted sales-call taxonomy. Google SSO on Builder+. SAML and enterprise SSO (Okta, Azure AD, etc.) not supported natively. API-based custom SSO flow possible on Growth+.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "SSO/SAML Integration": {
+      "tier": "native",
+      "plan_required": "Builder+",
+      "expert_ref": "Google SSO available Builder+. SAML/enterprise SSO not supported.",
+      "coverage_notes": "Alias of \"SSO / SAML\" from extracted sales-call taxonomy. Google SSO on Builder+. SAML and enterprise SSO (Okta, Azure AD, etc.) not supported natively. API-based custom SSO flow possible on Growth+.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Certification / Completion Certificates": {
+      "tier": "native",
+      "plan_required": "Builder",
+      "expert_ref": "Certificates section",
+      "coverage_notes": "Alias of \"Certificate Automation\" from extracted sales-call taxonomy. Auto-issued on course completion. 3 templates, student name and course name personalization. Builder+ only. No QR codes or external credential storage.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Website Integration": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Custom Domain + Linking",
+      "coverage_notes": "Alias of \"Website Embed / Link Integration\" from extracted sales-call taxonomy. Custom domain for seamless linking. Can link from external website to Teachable courses. No iframe embed of full course player.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Website Integration / Course Link Embedding": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Custom Domain + Linking",
+      "coverage_notes": "Alias of \"Website Embed / Link Integration\" from extracted sales-call taxonomy. Custom domain for seamless linking. Can link from external website to Teachable courses. No iframe embed of full course player.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "SCORM/xAPI Support": {
+      "tier": "gap",
+      "plan_required": null,
+      "expert_ref": "Not supported \u2014 SCORM/xAPI",
+      "coverage_notes": "Alias of \"SCORM Support\" from extracted sales-call taxonomy. No SCORM or xAPI support. Cannot import or play SCORM content packages.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "PayPal Payment Support": {
+      "tier": "gap",
+      "plan_required": null,
+      "expert_ref": "teachable:pay \u2014 Stripe-based",
+      "coverage_notes": "Alias of \"PayPal Integration\" from extracted sales-call taxonomy. teachable:pay is Stripe-based. No native PayPal integration. PayPal was previously supported but deprecated in favor of teachable:pay.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Membership / Subscription Billing": {
+      "tier": "native",
+      "plan_required": "Free",
+      "expert_ref": "Memberships + Pricing",
+      "coverage_notes": "Alias of \"Membership / Subscription Pricing\" from extracted sales-call taxonomy. Native membership product type with recurring billing. Monthly/annual subscriptions. No pause subscription feature.",
+      "confidence": "medium",
+      "last_verified_at": "2026-02-24",
+      "source_urls": []
+    },
+    "Tax Exemption for International Customers": {
+      "tier": "workaround",
+      "plan_required": "Free",
+      "expert_ref": "teachable:pay \u2014 tax handling",
+      "coverage_notes": "Alias of \"Government Tax Exemption\" from extracted sales-call taxonomy. teachable:pay handles automated tax collection. Tax-exempt purchases may require manual coupon or offline processing. No native tax-exempt checkout flow.",
+      "confidence": "low",
       "last_verified_at": "2026-02-24",
       "source_urls": []
     }

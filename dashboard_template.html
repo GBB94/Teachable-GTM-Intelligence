@@ -6735,7 +6735,7 @@ function buildFeatures() {
 
     // Group mentions by feature (PD/KB filter applied inline, not via activeMentions)
     const mentions = (activeMentions()).filter(m =>
-        _pdkbFilter === 'all' || m.pd_kb === _pdkbFilter
+        m && m.keyword && (_pdkbFilter === 'all' || m.pd_kb === _pdkbFilter)
     );
     const featureGroups = {};
     mentions.forEach(m => {

@@ -46,6 +46,18 @@ INTERNAL_SPEAKER_NAMES = {
 VALID_FEATURE_TYPES = {"prospect_request", "prospect_interest", "workaround"}
 DROP_FEATURE_TYPES = {"internal_discussion", "internal_request", "rep_highlighted"}
 
+
+def _is_publishable_feature_mention(mention: dict) -> bool:
+    """True only for rows the dashboard can render as customer feature mentions."""
+    if not isinstance(mention, dict):
+        return False
+    if not str(mention.get("keyword") or "").strip():
+        return False
+    feat_type = mention.get("type", "")
+    if feat_type in DROP_FEATURE_TYPES or feat_type == "skipped":
+        return False
+    return True
+
 # PD/KB classification — weak prior only, not authoritative
 # PD = Program Distributor (internal audience: employees, students, citizens)
 # KB = Knowledge Business (external audience: customers, members, practitioners)
@@ -1051,14 +1063,20 @@ def cmd_inject(args):
 
     # Merge: keep existing mentions for calls NOT in the new input, replace for calls that are
     existing_mentions = data.get("mentions", [])
-    preserved = [m for m in existing_mentions if m.get("call_id") not in features_by_call]
-    all_mentions = preserved + new_mentions
+    preserved = [
+        m for m in existing_mentions
+        if m.get("call_id") not in features_by_call and _is_publishable_feature_mention(m)
+    ]
+    all_mentions = [
+        m for m in preserved + new_mentions
+        if _is_publishable_feature_mention(m)
+    ]
 
     # Rebuild stats from the complete merged dataset
     all_call_ids = {m.get("call_id") for m in all_mentions}
     all_keywords = {}
     for m in all_mentions:
-        kw = m.get("keyword", "Unknown")
+        kw = m.get("keyword", "")
         all_keywords[kw] = all_keywords.get(kw, 0) + 1
 
     data["mentions"] = all_mentions
@@ -2027,6 +2045,10 @@ def cmd_cleanup(args):
     fixed = 0
 
     for m in mentions:
+        if not _is_publishable_feature_mention(m):
+            removed += 1
+            continue
+
         speaker = m.get("speaker", "")
         feat_type = m.get("type", "")
 
@@ -2072,7 +2094,7 @@ def cmd_cleanup(args):
 
     print(f"Cleanup complete:")
     print(f"  {fixed} company fields filled in")
-    print(f"  {removed} internal-speaker mentions removed")
+    print(f"  {removed} invalid/internal mentions removed")
     print(f"  {len(cleaned)} mentions remaining")
 
     # Show company distribution

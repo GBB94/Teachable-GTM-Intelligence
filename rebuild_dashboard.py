@@ -25,6 +25,7 @@ OUTPUT_PATH = os.path.join(OUTPUT_DIR, "index.html")
 FEATURES_PATH = os.path.join(OUTPUT_DIR, "features.json")
 PERF_PATH = os.path.join(OUTPUT_DIR, "performance.json")
 WIN_LOSS_PATH = os.path.join(OUTPUT_DIR, "win_loss.json")
+CAPABILITY_MAP_PATH = os.path.join(REPO_DIR, "config", "capability_map.json")
 
 
 def _extract_json_at(html: str, marker: str) -> dict | None:
@@ -65,6 +66,24 @@ def load_dashboard_data(existing_html: str) -> dict | None:
             print(f"  Using canonical data: {FEATURES_PATH}")
             return json.load(f)
     return extract_data_from_html(existing_html)
+
+
+def refresh_capability_map(data: dict) -> None:
+    """Keep the embedded capability overlay in sync with config/capability_map.json."""
+    if not os.path.exists(CAPABILITY_MAP_PATH):
+        print(f"  WARNING: {CAPABILITY_MAP_PATH} not found. Capability map unchanged.")
+        return
+    with open(CAPABILITY_MAP_PATH) as f:
+        cap_data = json.load(f)
+    data["capability_map"] = cap_data.get("mapping", cap_data)
+    print(f"  Loaded capability map: {len(data['capability_map'])} features mapped")
+
+
+def write_canonical_dashboard_data(data: dict) -> None:
+    """Persist canonical DATA updates used by rebuild_dashboard."""
+    with open(FEATURES_PATH, "w") as f:
+        json.dump(data, f, indent=2)
+        f.write("\n")
 
 
 def load_win_loss() -> dict | None:
@@ -118,6 +137,8 @@ def main():
     if not data:
         print("ERROR: Could not extract DATA from existing index.html.")
         sys.exit(1)
+    refresh_capability_map(data)
+    write_canonical_dashboard_data(data)
 
     segment_defs = extract_segment_defs_from_html(existing_html)
     if not segment_defs:
