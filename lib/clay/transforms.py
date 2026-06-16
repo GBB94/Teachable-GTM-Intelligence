@@ -151,6 +151,11 @@ def generate_idempotency_key(key_type, **kwargs):
 # ---------------------------------------------------------------------------
 # Companies to never seed (your own company / internal domains)
 _SELF_COMPANY_NAMES = {"teachable"}
+_JUNK_COMPANY_NAMES = {
+    "connect with teachable", "meeting with teachable", "demo with teachable",
+    "connect to teachable", "reconnect with teachable", "next steps with teachable",
+    "connect with teachable zach", "30-minute meeting",
+}
 _SELF_DOMAINS = {"teachable.com"}
 
 
@@ -177,9 +182,9 @@ def aggregate_companies(data):
         marketing = call.get("marketing_data", {}) if isinstance(call.get("marketing_data"), dict) else {}
 
         # Resolve company name: mention field > marketing_data > title inference
-        raw_company = mention.get("company", "").strip()
+        raw_company = (mention.get("company") or "").strip()
         if not raw_company:
-            raw_company = marketing.get("company", "").strip()
+            raw_company = (marketing.get("company") or "").strip()
         if not raw_company:
             raw_company = _infer_company_from_call(call_title)
 
@@ -187,8 +192,10 @@ def aggregate_companies(data):
         if not company_name:
             continue
 
-        # Skip self-company
+        # Skip self-company and generic call titles masquerading as companies
         if company_name.lower() in _SELF_COMPANY_NAMES:
+            continue
+        if company_name.lower() in _JUNK_COMPANY_NAMES:
             continue
 
         if company_name not in company_data:
