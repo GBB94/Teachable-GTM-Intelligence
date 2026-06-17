@@ -57,6 +57,27 @@ def normalize_company_name(name):
     return name
 
 
+_COMPANY_NAME_OVERRIDES = {
+    # HubSpot notes often have the cleaner company value even when extraction
+    # produced a fuzzy label. Keep these scoped to names observed in the data.
+    "agentambitionacademy": "Agent's Ambition",
+    "axitril": "ActiveTrail",
+    "activetrail": "ActiveTrail",
+    "energycenter": "Center for Sustainable Energy",
+    "sustainable energy company": "Center for Sustainable Energy",
+    "sangat (non-profit, india)": "Sangath",
+    "sangath": "Sangath",
+    "unknown (cpg consulting firm)": "Beon",
+    "beon": "Beon",
+}
+
+
+def canonicalize_company_name(name):
+    """Resolve known fuzzy company labels to the display name we want in Clay."""
+    normalized = normalize_company_name(name)
+    return _COMPANY_NAME_OVERRIDES.get(normalized.lower(), normalized)
+
+
 def slugify(name):
     """Generate a deterministic company_id from company name."""
     s = name.lower().strip()
@@ -84,9 +105,56 @@ def normalize_domain(raw):
     if not raw:
         return ""
     d = str(raw).strip().lower()
+    d = re.sub(r"^https?://", "", d)
+    d = d.split("/")[0]
+    d = re.sub(r"\s+", "", d)
     if d.startswith("www."):
         d = d[4:]
     return d
+
+
+_EMAIL_DOMAIN_RE = re.compile(r"\b[a-z0-9._%+-]+@([a-z0-9.-]+\.[a-z]{2,})\b", re.IGNORECASE)
+_NON_CUSTOMER_EMAIL_DOMAINS = {
+    "aol.com",
+    "gmail.com",
+    "googlemail.com",
+    "hotmail.com",
+    "icloud.com",
+    "live.com",
+    "me.com",
+    "msn.com",
+    "outlook.com",
+    "proton.me",
+    "protonmail.com",
+    "yahoo.com",
+    "ymail.com",
+    "hubspot.com",
+    "teachable.com",
+}
+
+
+def _is_customer_email_domain(domain):
+    """Return true for business domains that are useful as prospect domains."""
+    if not domain:
+        return False
+    if domain in _NON_CUSTOMER_EMAIL_DOMAINS:
+        return False
+    if any(domain.endswith("." + d) for d in _NON_CUSTOMER_EMAIL_DOMAINS):
+        return False
+    return bool(re.search(r"\.[a-z]{2,}$", domain))
+
+
+def _extract_customer_email_domains(*texts):
+    """Extract unique customer domains from HubSpot attendee email text."""
+    domains = []
+    for text in texts:
+        if not text:
+            continue
+        for match in _EMAIL_DOMAIN_RE.finditer(str(text)):
+            domain = normalize_domain(match.group(1))
+            if _is_customer_email_domain(domain) and domain not in domains:
+                domains.append(domain)
+    return domains
 
 
 # ---------------------------------------------------------------------------
@@ -188,7 +256,7 @@ def aggregate_companies(data):
         if not raw_company:
             raw_company = _infer_company_from_call(call_title)
 
-        company_name = normalize_company_name(raw_company)
+        company_name = canonicalize_company_name(raw_company)
         if not company_name:
             continue
 
@@ -227,18 +295,28 @@ def aggregate_companies(data):
         if not cd["segment"]:
             cd["segment"] = call.get("segment", "")
 
-        # Pull domain — prefer company_domain (from analysis) over marketing_data fallback
+        # Pull domain: prefer explicit analysis, then customer attendee emails,
+        # then marketing fallback. Email extraction is intentionally conservative.
         # Confidence priority: high > low > unresolved
-        _CONF_RANK = {"high": 3, "low": 2, "unresolved": 1}
+        _CONF_RANK = {"high": 4, "medium": 3, "low": 2, "unresolved": 1}
         call_domain = call.get("company_domain", "")
-        call_conf = call.get("domain_confidence", "unresolved")
+        call_conf = call.get("domain_confidence") or "unresolved"
         if call_domain and _CONF_RANK.get(call_conf, 0) > _CONF_RANK.get(cd["domain_confidence"], 0):
-            cd["domain"] = call_domain
+            cd["domain"] = normalize_domain(call_domain)
             cd["domain_confidence"] = call_conf
-        elif not cd["domain"] and marketing:
+        elif not cd["domain"]:
+            customer_domains = _extract_customer_email_domains(
+                call.get("hubspot_note", ""),
+                call.get("attendees", ""),
+                call.get("organizer", ""),
+            )
+            if len(customer_domains) == 1:
+                cd["domain"] = customer_domains[0]
+                cd["domain_confidence"] = "high"
+        if not cd["domain"] and marketing:
             domain_raw = marketing.get("domain", "") or marketing.get("website", "")
             if domain_raw:
-                cd["domain"] = domain_raw
+                cd["domain"] = normalize_domain(domain_raw)
                 cd["domain_confidence"] = "low"
 
         speaker = mention.get("speaker", "")

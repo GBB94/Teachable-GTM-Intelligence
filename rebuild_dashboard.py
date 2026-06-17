@@ -138,7 +138,6 @@ def main():
         print("ERROR: Could not extract DATA from existing index.html.")
         sys.exit(1)
     refresh_capability_map(data)
-    write_canonical_dashboard_data(data)
 
     segment_defs = extract_segment_defs_from_html(existing_html)
     if not segment_defs:
@@ -148,6 +147,7 @@ def main():
     perf = load_performance()
     win_loss = load_win_loss()
     html = render_dashboard(data, perf, segment_defs, win_loss)
+    write_canonical_dashboard_data(data)
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     with open(OUTPUT_PATH, "w") as f:
