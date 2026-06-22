@@ -4289,6 +4289,36 @@ body {
     border-radius: 12px;
     padding: 1.15rem 1.25rem;
 }
+.md-note-feedback--rich { white-space: normal; }
+.md-note-feedback--rich p { margin: 0 0 0.7em; }
+.md-note-feedback--rich p:last-child { margin-bottom: 0; }
+.md-note-feedback--rich ul { margin: 0.4em 0 0.7em; padding-left: 1.25em; }
+.md-note-feedback--rich li { margin: 0.25em 0; }
+.md-note-feedback--rich strong { color: #eef0ff; font-weight: 600; }
+.md-note-feedback--editing {
+    white-space: normal;
+    outline: none;
+    border-color: rgba(107,124,255,0.55);
+    box-shadow: 0 0 0 2px rgba(107,124,255,0.18);
+    cursor: text;
+}
+.md-fb-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.55rem; }
+.md-fb-btn {
+    font: inherit; font-size: 0.74rem; color: #b9c3ff;
+    background: rgba(107,124,255,0.1); border: 1px solid rgba(107,124,255,0.22);
+    border-radius: 7px; padding: 4px 10px; cursor: pointer; line-height: 1.4;
+    transition: background 0.12s, border-color 0.12s;
+}
+.md-fb-btn:hover { background: rgba(107,124,255,0.18); border-color: rgba(107,124,255,0.4); }
+.md-fb-btn--save { color: #34d399; background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.25); }
+.md-fb-btn--save:hover { background: rgba(52,211,153,0.18); }
+.md-fb-btn--ghost { color: #8b8fa3; background: transparent; border-color: rgba(255,255,255,0.1); }
+.md-fb-btn--ghost:hover { background: rgba(255,255,255,0.04); }
+.md-fb-edited {
+    font-size: 0.68rem; color: #f0c040; text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 700; padding: 2px 8px; border-radius: 999px;
+    background: rgba(240,192,64,0.1); border: 1px solid rgba(240,192,64,0.22);
+}
 .md-note-empty {
     color: #6b7084;
     font-style: italic;
@@ -13066,7 +13096,7 @@ var _mdUnlocked = false;
 var _mdOutcomeFilter = 'LOST';
 var _mdReasonFilter = 'product_gap';
 var _mdRepFilter = 'mine';
-var _mdDaysFilter = 30;
+var _mdDaysFilter = 180;
 var _mdNeedFilter = 'all';
 var _mdQueueFilter = 'active';
 
@@ -13178,6 +13208,171 @@ function _mdBindKeyboard() {
         cards[next].scrollIntoView({behavior: 'smooth', block: 'start'});
         event.preventDefault();
     });
+}
+
+// ---- My Deals: feedback formatting + inline editing ----
+function _mdFeedbackStoreKey() { return 'tsi_mydeals_feedback_v1'; }
+function _mdLoadFeedbackOverrides() {
+    try { return JSON.parse(localStorage.getItem(_mdFeedbackStoreKey()) || '{}') || {}; }
+    catch (e) { return {}; }
+}
+function _mdSaveFeedbackOverrides(map) {
+    try { localStorage.setItem(_mdFeedbackStoreKey(), JSON.stringify(map)); } catch (e) {}
+}
+function _mdEsc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// Bold data-derived terms (this deal's feature-need + competitor names) inside an
+// already-escaped string. Longest-first so multi-word names win over substrings.
+function _mdBoldKeywords(escaped, kw) {
+    if (!kw || !kw.length) return escaped;
+    var uniq = [], seen = {};
+    kw.forEach(function (k) {
+        k = String(k || '').trim();
+        if (k.length >= 3 && !seen[k.toLowerCase()]) { seen[k.toLowerCase()] = 1; uniq.push(k); }
+    });
+    uniq.sort(function (a, b) { return b.length - a.length; });
+    uniq.forEach(function (k) {
+        var escK = _mdEsc(k).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        var re;
+        try { re = new RegExp('(?<![\\w>])(' + escK + ')(?![\\w<])', 'gi'); }
+        catch (e) { re = new RegExp('\\b(' + escK + ')\\b', 'gi'); }
+        escaped = escaped.replace(re, '<strong>$1</strong>');
+    });
+    return escaped;
+}
+
+// Break a dense single-line note into readable blocks (bullets or ~240-char paragraphs).
+function _mdSplitIntoBlocks(raw) {
+    if (/(?:^|\s)[-•*·]\s+/.test(raw)) {
+        var parts = raw.split(/\s+(?=[-•*·]\s)/);
+        if (parts.length > 1) return parts;
+    }
+    var sentences;
+    try { sentences = raw.split(/(?<=[.!?])\s+(?=[A-Z0-9"])/); }
+    catch (e) { sentences = raw.split(/([.!?])\s+/); }
+    var blocks = [], cur = '';
+    sentences.forEach(function (s) {
+        if (!s) return;
+        if (!cur) { cur = s; }
+        else if ((cur.length + s.length) <= 240) { cur += ' ' + s; }
+        else { blocks.push(cur); cur = s; }
+    });
+    if (cur) blocks.push(cur);
+    return blocks;
+}
+
+// Heuristic, render-time prettify of a plain-text feedback note → safe HTML.
+function _mdFormatFeedback(text, deal) {
+    if (!text) return '';
+    var kw = [];
+    try { _mdFeedbackFeatures(deal).forEach(function (f) { var n = _mdFeatureName(f); if (n) kw.push(n); }); } catch (e) {}
+    try {
+        (deal.competitors_mentioned || []).forEach(function (c) {
+            var n = typeof c === 'object' ? (c.competitor || c.name || '') : c;
+            if (n && n !== 'Not Applicable') kw.push(n);
+        });
+    } catch (e) {}
+
+    var raw = String(text).replace(/\r/g, '').trim();
+    var lines = raw.indexOf('\n') >= 0 ? raw.split(/\n+/) : _mdSplitIntoBlocks(raw);
+    var out = [], listBuf = [];
+    function flushList() { if (listBuf.length) { out.push('<ul>' + listBuf.join('') + '</ul>'); listBuf = []; } }
+    lines.forEach(function (line) {
+        line = line.trim();
+        if (!line) return;
+        var bullet = line.match(/^\s*(?:[-•*·–]|\d+[.)])\s+(.*)$/);
+        if (bullet) { listBuf.push('<li>' + _mdBoldKeywords(_mdEsc(bullet[1]), kw) + '</li>'); return; }
+        flushList();
+        var lab = line.match(/^([A-Z][A-Za-z0-9 \/&'()\-]{1,46}?):\s*(.*)$/);
+        if (lab) {
+            var body = lab[2] ? (' ' + _mdBoldKeywords(_mdEsc(lab[2]), kw)) : '';
+            out.push('<p><strong>' + _mdEsc(lab[1]) + ':</strong>' + body + '</p>');
+        } else {
+            out.push('<p>' + _mdBoldKeywords(_mdEsc(line), kw) + '</p>');
+        }
+    });
+    flushList();
+    return out.join('');
+}
+
+// Strip edited HTML down to a safe inline subset before persisting/rendering.
+function _mdSanitizeHtml(html) {
+    var allowed = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, UL: 1, OL: 1, LI: 1, P: 1, BR: 1, DIV: 1, SPAN: 1 };
+    var tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    (function walk(node) {
+        Array.prototype.slice.call(node.childNodes).forEach(function (c) {
+            if (c.nodeType === 1) {
+                if (!allowed[c.tagName]) {
+                    while (c.firstChild) node.insertBefore(c.firstChild, c);
+                    node.removeChild(c);
+                } else {
+                    while (c.attributes.length) c.removeAttribute(c.attributes[0].name);
+                    walk(c);
+                }
+            }
+        });
+    })(tmp);
+    return tmp.innerHTML;
+}
+
+function _mdViewToolbar(id, isEdited) {
+    var s = '<button class="md-fb-btn" onclick="mdEditFeedback(\'' + id + '\')">&#9998; Edit formatting</button>';
+    if (isEdited) {
+        s += '<span class="md-fb-edited">edited</span>';
+        s += '<button class="md-fb-btn md-fb-btn--ghost" onclick="mdResetFeedback(\'' + id + '\')">Reset to original</button>';
+    }
+    return s;
+}
+function _mdEditToolbar(id) {
+    function btn(label, cmd, cls) {
+        return '<button class="md-fb-btn' + (cls ? ' ' + cls : '') +
+            '" onmousedown="event.preventDefault()" onclick="' + cmd + '">' + label + '</button>';
+    }
+    return btn('<b>B</b>', "mdFmtCmd('bold')") +
+           btn('&bull; List', "mdFmtCmd('insertUnorderedList')") +
+           btn('Clear', "mdFmtCmd('removeFormat')") +
+           btn('Save', "mdSaveFeedback('" + id + "')", 'md-fb-btn--save') +
+           btn('Cancel', "mdCancelFeedback('" + id + "')", 'md-fb-btn--ghost');
+}
+function mdFmtCmd(cmd) { try { document.execCommand(cmd, false, null); } catch (e) {} }
+
+function mdEditFeedback(id) {
+    var box = document.getElementById('md-fb-' + id), ctl = document.getElementById('md-fbctl-' + id);
+    if (!box || !ctl) return;
+    box.dataset.snapshot = box.innerHTML;
+    box.setAttribute('contenteditable', 'true');
+    box.classList.add('md-note-feedback--editing');
+    ctl.innerHTML = _mdEditToolbar(id);
+    box.focus();
+}
+function mdSaveFeedback(id) {
+    var box = document.getElementById('md-fb-' + id), ctl = document.getElementById('md-fbctl-' + id);
+    if (!box || !ctl) return;
+    var clean = _mdSanitizeHtml(box.innerHTML);
+    var map = _mdLoadFeedbackOverrides(); map[id] = clean; _mdSaveFeedbackOverrides(map);
+    box.innerHTML = clean;
+    box.removeAttribute('contenteditable');
+    box.classList.remove('md-note-feedback--editing');
+    delete box.dataset.snapshot;
+    ctl.innerHTML = _mdViewToolbar(id, true);
+}
+function mdCancelFeedback(id) {
+    var box = document.getElementById('md-fb-' + id), ctl = document.getElementById('md-fbctl-' + id);
+    if (!box || !ctl) return;
+    if (box.dataset.snapshot != null) box.innerHTML = box.dataset.snapshot;
+    delete box.dataset.snapshot;
+    box.removeAttribute('contenteditable');
+    box.classList.remove('md-note-feedback--editing');
+    ctl.innerHTML = _mdViewToolbar(id, _mdLoadFeedbackOverrides()[id] != null);
+}
+function mdResetFeedback(id) {
+    var map = _mdLoadFeedbackOverrides(); delete map[id]; _mdSaveFeedbackOverrides(map);
+    var box = document.getElementById('md-fb-' + id), ctl = document.getElementById('md-fbctl-' + id);
+    var deal = ((typeof WIN_LOSS !== 'undefined' && WIN_LOSS && WIN_LOSS.deals) || []).filter(
+        function (x) { return String(x.id) === String(id); })[0];
+    if (box && deal) box.innerHTML = _mdFormatFeedback(_mdFeedbackText(deal), deal);
+    if (ctl) ctl.innerHTML = _mdViewToolbar(id, false);
 }
 
 function _mdFeedbackText(d) {
@@ -13409,8 +13604,12 @@ function buildMyDeals() {
         html += '<span class="md-note-pill">' + esc(d.outcome) + '</span>';
         html += '</div>';
 
-        if (feedback) {
-            html += '<div class="md-note-feedback">' + esc(feedback) + '</div>';
+        var fbOverride = _mdLoadFeedbackOverrides()[d.id];
+        var fbEdited = (fbOverride != null);
+        if (feedback || fbEdited) {
+            var fbHtml = fbEdited ? fbOverride : _mdFormatFeedback(feedback, d);
+            html += '<div class="md-note-feedback md-note-feedback--rich" id="md-fb-' + d.id + '">' + fbHtml + '</div>';
+            html += '<div class="md-fb-toolbar" id="md-fbctl-' + d.id + '">' + _mdViewToolbar(d.id, fbEdited) + '</div>';
         } else {
             html += '<div class="md-note-feedback md-note-empty">' + esc(_mdFeedbackEmptyText(d)) + '</div>';
         }
@@ -13551,6 +13750,7 @@ function buildMyDeals() {
     h += pill('7d', 7, _mdDaysFilter, 'mdSetDays');
     h += pill('30d', 30, _mdDaysFilter, 'mdSetDays');
     h += pill('90d', 90, _mdDaysFilter, 'mdSetDays');
+    h += pill('180d', 180, _mdDaysFilter, 'mdSetDays');
     h += pill('All Time', 0, _mdDaysFilter, 'mdSetDays');
     h += '</div>';
 

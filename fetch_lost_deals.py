@@ -1093,11 +1093,13 @@ def main():
             and (props.get("loss_reason") or "").strip().lower() == "product limitation"
         )
 
-        # Filter by lead source (only inbound, outbound, referral), but never
-        # drop a HubSpot-marked Product Limitation loss. Those are the source
-        # of truth for product-gap coverage.
+        # Filter by lead source (only inbound, outbound, referral) for LOST deals,
+        # but never drop a HubSpot-marked Product Limitation loss (source of truth
+        # for product-gap coverage) and never drop WON deals — every win counts
+        # regardless of lead source (e.g. PQL, Events, Trial Users).
         lead_source = (props.get("lead_source") or "").strip().lower()
-        if lead_source and lead_source not in ALLOWED_LEAD_SOURCES and not product_limitation_scope_override:
+        if lead_source and lead_source not in ALLOWED_LEAD_SOURCES \
+                and not product_limitation_scope_override and outcome != "WON":
             excluded_by_lead_source += 1
             continue
 
@@ -1215,7 +1217,10 @@ def main():
             and hubspot_loss_reason.lower() == "product limitation"
         )
 
-        if not product_limitation_marked \
+        # Won deals always count (show amount/owner/date even with no notes).
+        # Lost deals still require substantive notes or a product-limitation marker.
+        if outcome != "WON" \
+                and not product_limitation_marked \
                 and len(combined_text.strip()) < MIN_NOTE_CHARS \
                 and not _note_has_keyword_override(combined_text):
             continue
