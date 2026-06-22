@@ -1,7 +1,7 @@
 # PROJECT STATUS
 
-**Last updated:** 2026-02-22
-**Updated by:** Opus 4.6 (session 16 — 12 call analysis + 10 junk)
+**Last updated:** 2026-06-22
+**Updated by:** Codex (win/loss feature taxonomy audit)
 
 ---
 
@@ -15,6 +15,11 @@ Teachable Sales Intelligence. Pulls call transcripts from Fireflies, uses Claude
 ---
 
 ## What's Working
+
+- [x] Win/loss feature extraction uses context-specific taxonomy rules instead of broad compliance, hybrid, language, and certificate substring matches
+- [x] Attendance Reporting requires actual attendance context; course sequencing, quiz logic, HIPAA/BAA, and PCI documentation remain separate feature groups
+- [x] Win/loss taxonomy regression suite covers seven representative false-positive and nesting cases
+- [x] 180-day HubSpot win/loss dataset and dashboard rebuilt after the taxonomy correction
 
 - [x] Fireflies API integration (pull calls, filter by owner/keywords/date)
 - [x] Interactive call approval (select which calls to process)

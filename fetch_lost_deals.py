@@ -213,7 +213,11 @@ def _parse_product_feedback(raw: str) -> list[str]:
 # Lowercase fragments -> canonical name. Checked against feedback notes text.
 _FEATURE_KEYWORD_MAP = {
     "scorm": "SCORM Support",
-    "certificate": "Certificate Issuance",
+    "certificate of completion": "Certificate Issuance",
+    "certificates of completion": "Certificate Issuance",
+    "completion certificate": "Certificate Issuance",
+    "completion certificates": "Certificate Issuance",
+    "customizable completion certificate": "Certificate Issuance",
     "progress track": "Progress Tracking",
     "enrollment limit": "Course Enrollment Limits",
     "waitlist": "Waitlist",
@@ -225,13 +229,12 @@ _FEATURE_KEYWORD_MAP = {
     "website builder": "Website Builder Integration",
     "bulk upload": "Bulk Content Upload",
     "bulk content": "Bulk Content Upload",
-    "spanish": "Setup in User Language (Spanish)",
     "user language": "Setup in User Language (Spanish)",
     "coaching workspace": "Coaching Workspace",
     "coaching notes": "Coaching Notes",
     "coaching accountability": "Coaching Accountability",
     "coaching automation": "Coaching Automation",
-    "zoom": "Zoom Integration",
+    "zoom integration": "Zoom Integration",
     "one-click access": "One-Click Access (No Login Required)",
     "no login": "One-Click Access (No Login Required)",
     "admin hierarchy": "Multi-Level Admin Hierarchy (Organizations)",
@@ -240,8 +243,15 @@ _FEATURE_KEYWORD_MAP = {
     "org-level reporting": "Centralized / Org-Level Reporting",
     "centralized reporting": "Centralized / Org-Level Reporting",
     "attendance report": "Attendance Reporting (Compliance Use Case)",
-    "compliance": "Attendance Reporting (Compliance Use Case)",
-    "learning path": "Personalized Learning Paths (Rules-Based)",
+    "attendance tracking": "Attendance Reporting (Compliance Use Case)",
+    "track attendance": "Attendance Reporting (Compliance Use Case)",
+    "course compliance controls": "Compliance Controls",
+    "course compliance settings": "Compliance Controls",
+    "pci compliance documentation": "PCI Compliance Documentation",
+    "hipaa compliance": "HIPAA / BAA Compliance",
+    "business associate agreement": "HIPAA / BAA Compliance",
+    "cross-course learning paths": "Course Sequencing / Completion Gating",
+    "learning path": "Learning Paths",
     "personalized learning": "Personalized Learning Paths (Rules-Based)",
     "conditional content": "Conditional Content Visibility (Per User)",
     "content visibility": "Conditional Content Visibility (Per User)",
@@ -257,6 +267,8 @@ _FEATURE_KEYWORD_MAP = {
     "no separate login": "Embedded Learning Experience (No Separate Login)",
     "prerequisite": "Course Sequencing / Completion Gating",
     "prerequisites": "Course Sequencing / Completion Gating",
+    "completion before unlocking": "Course Sequencing / Completion Gating",
+    "sequential completion": "Course Sequencing / Completion Gating",
     "lock course": "Course Sequencing / Completion Gating",
     "locked course": "Course Sequencing / Completion Gating",
     "sequential course": "Course Sequencing / Completion Gating",
@@ -264,7 +276,13 @@ _FEATURE_KEYWORD_MAP = {
     "in person course": "Hybrid Scheduling",
     "on-site class": "Hybrid Scheduling",
     "onsite class": "Hybrid Scheduling",
-    "hybrid": "Hybrid Scheduling",
+    "session-based scheduling": "Hybrid Scheduling",
+    "schedule multiple intakes": "Hybrid Scheduling",
+    "in-person event registration": "Hybrid Scheduling",
+    "mixed in-person and remote": "Hybrid Scheduling",
+    "live and hybrid sessions": "Hybrid Scheduling",
+    "native live": "Live Sessions",
+    "live streaming": "Live Sessions",
     "push notification": "Push Notifications",
     "push notifications": "Push Notifications",
     "targeted notification": "Push Notifications",
@@ -288,17 +306,20 @@ _FEATURE_KEYWORD_MAP = {
     "community-first": "Community Features",
     "home for her community": "Community Features",
     "audience lives": "Community Features",
+    "community segmentation": "Private / Gated Community Tiers",
+    "private sub-groups": "Private / Gated Community Tiers",
+    "community engagement analytics": "Reporting Dashboard",
     "discord": "Community Features",
     "facebook groups": "Community Features",
     "direct/group messaging": "Direct Messaging",
     "group chats": "Direct Messaging",
     "whatsapp-style": "Direct Messaging",
-    "coaching calendar": "Hybrid Scheduling",
-    "upcoming sessions": "Hybrid Scheduling",
+    "coaching calendar": "Integrated One-on-One Coaching Sessions",
+    "upcoming sessions": "Integrated One-on-One Coaching Sessions",
     "habit tracker": "Coaching Accountability",
     "diary-style": "Coaching Accountability",
-    "call logging": "Completion Tracking",
-    "track completed sessions": "Completion Tracking",
+    "call logging": "Coach Pay-Per-Session Model",
+    "track completed sessions": "Coach Pay-Per-Session Model",
     "white label app": "White Label Mobile App",
     "language functionality": "Localization / Multi-language Support",
     "language functionalitaty": "Localization / Multi-language Support",
@@ -329,6 +350,12 @@ _FEATURE_KEYWORD_MAP = {
     "technical assessment": "Quiz / Assessment Builder",
     "one attempt only": "Quiz / Assessment Builder",
     "minimum passing score": "Quiz / Assessment Builder",
+    "one quiz per lesson": "Quiz / Assessment Builder",
+    "multiple quizzes": "Quiz / Assessment Builder",
+    "pass-one-of": "Quiz / Assessment Builder",
+    "quiz pass rates": "Quiz / Assessment Builder",
+    "pass thresholds": "Quiz / Assessment Builder",
+    "retry limits": "Quiz / Assessment Builder",
     "only students who pass": "Registration Gating",
     "higher level of customization": "Brand Customization",
     "course builder customization": "Brand Customization",
@@ -339,11 +366,16 @@ _FEATURE_KEYWORD_MAP = {
     "separate site": "One-Click Access (No Login Required)",
     "stripe express dashboard": "Stripe Express Dashboard Limitations",
     "main stripe dashboard": "Stripe Express Dashboard Limitations",
-    "organizations feature": "Organizations / Multi-tenancy",
+    "organizations feature was the dealmaker": "Organizations / Multi-tenancy",
+    "organizations feature was the biggest driver": "Organizations / Multi-tenancy",
+    "organizations feature mapped directly": "Organizations / Multi-tenancy",
+    "limitation in our organizations feature": "Organizations / Multi-tenancy",
+    "getting access to the organizations": "Organizations / Multi-tenancy",
     "custom student experience": "Per-Student Course Customization by Coach",
     "tags/metadata": "Quiz-Based Routing & Enrollment",
     "automatically route": "Quiz-Based Routing & Enrollment",
     "guided sequence": "Learning Paths",
+    "structured, guided pathways": "Learning Paths",
     "no catalog browsing": "Learning Paths",
     "duolingo-style": "Learning Paths",
     "ai-contect": "AI Course Generation",
@@ -351,7 +383,76 @@ _FEATURE_KEYWORD_MAP = {
     "ai content": "AI Course Generation",
     "ai platform": "AI Course Generation",
     "help them create videos": "AI Course Generation",
+    "custom checkout fields": "Custom Checkout Fields",
+    "powerpoint with embedded voiceover": "Voiceover for Courses",
+    "audio narration per slide": "Voiceover for Courses",
+    "learning stream integration": "Third-party Integration",
+    "snowflake integration": "Third-party Integration",
+    "monday.com integration": "Third-party Integration",
+    "native survey": "Pre/Post Survey Integration",
+    "survey tool": "Pre/Post Survey Integration",
+    "badges, streaks, or leaderboards": "Gamification & Interactive Learning",
+    "native gamification": "Gamification & Interactive Learning",
+    "flashcards": "Gamification & Interactive Learning",
+    "cohort management": "Group Enrollment",
+    "mentor-student photo feedback": "Learner File Upload to Coaches",
+    "student submissions": "File Upload & Grading",
+    "multi-school dashboard": "Organization-level Reporting",
+    "per-country content branching": "Conditional Content Visibility (Per User)",
+    "different lesson tracks": "Conditional Content Visibility (Per User)",
+    "text content translation": "Multi-language Support",
+    "bilingual website": "Multi-language Support",
+    "interactive video": "Interactive Video",
+    "assessment depth": "Quiz / Assessment Builder",
+    "organizational/b2b structure": "Organizations / Multi-tenancy",
+    "video watch enforcement": "Video Scrub Prevention",
+    "video completion %": "Video Scrub Prevention",
 }
+
+# These phrases commonly appear as customer-owned content or competitor context in
+# won notes. Treat them as gaps only unless a future rule can establish positive
+# product evidence more precisely.
+_FEATURE_KEYWORD_OUTCOMES = {
+    "scorm": {"LOST"},
+    "question bank": {"LOST"},
+    "question banks": {"LOST"},
+    "randomization": {"LOST"},
+}
+
+# Exact text alone is not enough for these labels. For example, "certificate
+# issuance depends on assignment completion" describes a tracking gap, not a
+# certificate-generation gap.
+_CONTEXTUAL_CANONICAL_FEATURES = {
+    "Certificate Issuance",
+}
+
+_FEATURE_REGEX_RULES = [
+    (
+        re.compile(r"(?:admin|backend|back-end|interface).{0,80}(?:spanish|non[- ]english)|"
+                   r"(?:spanish|non[- ]english).{0,80}(?:admin|backend|back-end|interface)", re.I),
+        "Setup in User Language (Spanish)",
+    ),
+    (
+        re.compile(r"attendance.{0,50}(?:mixed|live|hybrid|in-person|remote).{0,30}(?:audience|session)|"
+                   r"(?:mixed|live|hybrid|in-person|remote).{0,50}attendance", re.I),
+        "Attendance Reporting (Compliance Use Case)",
+    ),
+    (
+        re.compile(r"(?:serve|show|deliver).{0,80}(?:different|country-specific).{0,40}"
+                   r"(?:lesson tracks|content).{0,80}(?:location|profile|country)", re.I),
+        "Conditional Content Visibility (Per User)",
+    ),
+    (
+        re.compile(r"(?:automatic|auto).{0,30}(?:translation|translate).{0,50}"
+                   r"(?:course|text|written) content", re.I),
+        "Multi-language Support",
+    ),
+    (
+        re.compile(r"(?:organizational|organization).{0,30}b2b structure|"
+                   r"b2b.{0,60}(?:organizational|organization).{0,30}structure", re.I),
+        "Organizations / Multi-tenancy",
+    ),
+]
 
 
 def _extract_features_from_notes(feedback_notes: str, outcome: str) -> list[dict]:
@@ -366,32 +467,52 @@ def _extract_features_from_notes(feedback_notes: str, outcome: str) -> list[dict
     lower = feedback_notes.lower()
     found: dict[str, str | None] = {}  # canonical name -> quote snippet or None
 
+    def add_match(canonical: str, start: int, end: int) -> None:
+        """Record one compact source excerpt for a canonical feature."""
+        if canonical in found:
+            return
+        quote_start = max(0, start - 30)
+        quote_end = min(len(feedback_notes), end + 30)
+        snippet = feedback_notes[quote_start:quote_end].strip()
+        if quote_start > 0:
+            snippet = "..." + snippet
+        if quote_end < len(feedback_notes):
+            snippet += "..."
+        found[canonical] = snippet
+
     # Check canonical names directly (case-insensitive)
     for canonical in PRODUCT_FEEDBACK_OPTIONS:
-        if canonical.lower() in lower:
-            # Extract a short quote around the match
-            idx = lower.index(canonical.lower())
-            start = max(0, idx - 30)
-            end = min(len(feedback_notes), idx + len(canonical) + 30)
-            snippet = feedback_notes[start:end].strip()
-            if start > 0:
-                snippet = "..." + snippet
-            if end < len(feedback_notes):
-                snippet = snippet + "..."
-            found[canonical] = snippet
+        if canonical in _CONTEXTUAL_CANONICAL_FEATURES:
+            continue
+        canonical_lower = canonical.lower()
+        if canonical_lower in lower:
+            idx = lower.index(canonical_lower)
+            add_match(canonical, idx, idx + len(canonical_lower))
 
     # Check keyword variants
     for keyword, canonical in _FEATURE_KEYWORD_MAP.items():
+        allowed_outcomes = _FEATURE_KEYWORD_OUTCOMES.get(keyword)
+        if allowed_outcomes and outcome not in allowed_outcomes:
+            continue
+        if keyword == "learning path" and "Course Sequencing / Completion Gating" in found:
+            continue
         if canonical not in found and keyword in lower:
             idx = lower.index(keyword)
-            start = max(0, idx - 30)
-            end = min(len(feedback_notes), idx + len(keyword) + 30)
-            snippet = feedback_notes[start:end].strip()
-            if start > 0:
-                snippet = "..." + snippet
-            if end < len(feedback_notes):
-                snippet = snippet + "..."
-            found[canonical] = snippet
+            add_match(canonical, idx, idx + len(keyword))
+
+    # Context-sensitive matches handle concepts whose single-word form is too
+    # broad to classify safely (for example "attendance" or "Spanish").
+    for pattern, canonical in _FEATURE_REGEX_RULES:
+        match = pattern.search(feedback_notes)
+        if match:
+            add_match(canonical, match.start(), match.end())
+
+    # In these notes learning paths are presented as a future workaround for
+    # conditional branching, not as the underlying missing capability.
+    if outcome == "LOST" \
+            and "Conditional Content Visibility (Per User)" in found \
+            and re.search(r"(?:use|using) learning paths once|workaround.{0,80}learning paths", lower):
+        found.pop("Learning Paths", None)
 
     sentiment = "positive" if outcome == "WON" else "negative"
     return [
