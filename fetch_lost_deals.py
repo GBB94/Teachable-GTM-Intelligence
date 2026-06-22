@@ -454,6 +454,123 @@ _FEATURE_REGEX_RULES = [
     ),
 ]
 
+# Win/loss signals use the same ten product areas as the call-intelligence
+# taxonomy. Features stay specific for evidence review; the category provides
+# the parent level needed for honest rollups and prevents a UI "Other" bucket
+# from being mistaken for an uncategorized product need.
+FEATURE_CATEGORY_MAP = {
+    # Curriculum & Content
+    "AI Course Generation": "Curriculum & Content",
+    "Bulk Content Upload": "Curriculum & Content",
+    "Centralized Knowledge Management": "Curriculum & Content",
+    "Conditional Content Visibility (Per User)": "Curriculum & Content",
+    "Course Sequencing / Completion Gating": "Curriculum & Content",
+    "Interactive Video": "Curriculum & Content",
+    "Large File Upload": "Curriculum & Content",
+    "Learning Paths": "Curriculum & Content",
+    "Localization / Multi-language Support": "Curriculum & Content",
+    "Manga / Document Reader": "Curriculum & Content",
+    "Multi-language Support": "Curriculum & Content",
+    "Per-Student Course Customization by Coach": "Curriculum & Content",
+    "Personalized Learning Paths (Rules-Based)": "Curriculum & Content",
+    "Setup in User Language (Spanish)": "Curriculum & Content",
+    "Video Hosting": "Curriculum & Content",
+    "Voiceover for Courses": "Curriculum & Content",
+
+    # Assessments & Quizzes
+    "File Upload & Grading": "Assessments & Quizzes",
+    "Learner File Upload to Coaches": "Assessments & Quizzes",
+    "Pre/Post Survey Integration": "Assessments & Quizzes",
+    "Question Bank": "Assessments & Quizzes",
+    "Quiz / Assessment Builder": "Assessments & Quizzes",
+    "Quiz Question Types": "Assessments & Quizzes",
+    "Quiz-Based Routing & Enrollment": "Assessments & Quizzes",
+    "Registration Gating": "Assessments & Quizzes",
+
+    # Commerce & Checkout
+    "Coach Pay-Per-Session Model": "Commerce & Checkout",
+    "Custom Checkout Fields": "Commerce & Checkout",
+    "Marketplace / Student Acquisition": "Commerce & Checkout",
+    "Stripe Express Dashboard Limitations": "Commerce & Checkout",
+    "YouTube Shopping Integration": "Commerce & Checkout",
+
+    # Compliance & Credentialing
+    "Attendance Reporting (Compliance Use Case)": "Compliance & Credentialing",
+    "Certificate Issuance": "Compliance & Credentialing",
+    "Compliance Controls": "Compliance & Credentialing",
+    "EU Data Residency (Regional Data Hosting Requirement)": "Compliance & Credentialing",
+    "HIPAA / BAA Compliance": "Compliance & Credentialing",
+    "PCI Compliance Documentation": "Compliance & Credentialing",
+    "Video Scrub Prevention": "Compliance & Credentialing",
+
+    # Reporting & Analytics
+    "Centralized / Org-Level Reporting": "Reporting & Analytics",
+    "Completion Tracking": "Reporting & Analytics",
+    "Org-Level Learning Analytics (Journey View)": "Reporting & Analytics",
+    "Organization-level Reporting": "Reporting & Analytics",
+    "Progress Tracking": "Reporting & Analytics",
+    "Reporting Dashboard": "Reporting & Analytics",
+
+    # Engagement & Community
+    "Coaching Accountability": "Engagement & Community",
+    "Coaching Automation": "Engagement & Community",
+    "Coaching Notes": "Engagement & Community",
+    "Coaching Workspace": "Engagement & Community",
+    "Community Features": "Engagement & Community",
+    "Direct Messaging": "Engagement & Community",
+    "Discussion Board/Forum": "Engagement & Community",
+    "Gamification & Interactive Learning": "Engagement & Community",
+    "Hybrid Scheduling": "Engagement & Community",
+    "Integrated One-on-One Coaching Sessions": "Engagement & Community",
+    "Live Sessions": "Engagement & Community",
+    "Private / Gated Community Tiers": "Engagement & Community",
+    "Push Notifications": "Engagement & Community",
+    "Wishlist / Favorites": "Engagement & Community",
+
+    # Organizations & Multi-tenancy
+    "Group Enrollment": "Organizations & Multi-tenancy",
+    "Multi-Level Admin Hierarchy (Organizations)": "Organizations & Multi-tenancy",
+    "Organizations / Multi-tenancy": "Organizations & Multi-tenancy",
+
+    # Platform & Integrations
+    "Automation Features": "Platform & Integrations",
+    "Course Integration": "Platform & Integrations",
+    "Custom Implementation / Expert Services": "Platform & Integrations",
+    "Embedded Course Widget": "Platform & Integrations",
+    "Embedded Learning Experience (No Separate Login)": "Platform & Integrations",
+    "One-Click Access (No Login Required)": "Platform & Integrations",
+    "SCORM Support": "Platform & Integrations",
+    "Third-party Integration": "Platform & Integrations",
+    "Zapier Integration": "Platform & Integrations",
+    "Zoom Integration": "Platform & Integrations",
+
+    # Design & Branding
+    "Brand Customization": "Design & Branding",
+    "Website Builder Integration": "Design & Branding",
+    "White Label Mobile App": "Design & Branding",
+
+    # User Management
+    "Course Enrollment Limits": "User Management",
+    "Waitlist": "User Management",
+}
+
+FEATURE_NAME_ALIASES = {
+    # These labels describe the same product capability. Keep the canonical
+    # wording used elsewhere in the dashboard so they cannot split demand.
+    "Localization / Multi-language Support": "Multi-language Support",
+}
+
+
+def _canonical_feature_name(name: str) -> str:
+    return FEATURE_NAME_ALIASES.get(name, name)
+
+
+def _feature_category(name: str) -> str:
+    canonical = _canonical_feature_name(name)
+    if canonical == UNCLASSIFIED_PRODUCT_LIMITATION_FEATURE:
+        return "NEEDS_REVIEW"
+    return FEATURE_CATEGORY_MAP.get(canonical, "NEEDS_REVIEW")
+
 
 def _extract_features_from_notes(feedback_notes: str, outcome: str) -> list[dict]:
     """Extract features from notes_on_customer_feedback using local keyword matching.
@@ -469,6 +586,7 @@ def _extract_features_from_notes(feedback_notes: str, outcome: str) -> list[dict
 
     def add_match(canonical: str, start: int, end: int) -> None:
         """Record one compact source excerpt for a canonical feature."""
+        canonical = _canonical_feature_name(canonical)
         if canonical in found:
             return
         quote_start = max(0, start - 30)
@@ -518,6 +636,7 @@ def _extract_features_from_notes(feedback_notes: str, outcome: str) -> list[dict
     return [
         {
             "feature":     name,
+            "category":    _feature_category(name),
             "sentiment":   sentiment,
             "source":      "feedback_notes",
             "loss_causal": True,
@@ -944,7 +1063,7 @@ def build_feature_impact_rows(deals: list[dict]) -> list[dict]:
     """Build merged feature rows for the diverging bar chart."""
     from collections import defaultdict
     rows: dict[str, dict] = defaultdict(lambda: {
-        "feature": "",
+        "feature": "", "category": "NEEDS_REVIEW",
         "won_deal_count": 0, "lost_deal_count": 0,
         "won_known_value": 0.0, "won_estimated_value": 0.0,
         "lost_known_value": 0.0, "lost_estimated_value": 0.0,
@@ -971,6 +1090,7 @@ def build_feature_impact_rows(deals: list[dict]) -> list[dict]:
             seen_features.add(name)
             r = rows[name]
             r["feature"] = name
+            r["category"] = feat.get("category") or _feature_category(name)
             r["deal_ids"].append(deal_id)
             if outcome == "WON":
                 r["won_deal_count"] += 1
@@ -1371,6 +1491,7 @@ def main():
         if product_limitation_marked and not combined_features:
             combined_features = [{
                 "feature": UNCLASSIFIED_PRODUCT_LIMITATION_FEATURE,
+                "category": "NEEDS_REVIEW",
                 "sentiment": "negative",
                 "source": "feedback_notes",
                 "loss_causal": True,
@@ -1405,6 +1526,7 @@ def main():
             if fname not in feature_signals[outcome]:
                 feature_signals[outcome][fname] = {
                     "feature": fname,
+                    "category": feat.get("category") or _feature_category(fname),
                     "mention_count": 0,
                     "associated_deal_value": 0.0,
                     "known_value": 0.0,

@@ -3882,6 +3882,14 @@ body {
 .wl-feature-cost-card .wl-donut-type { font-size: 0.82rem; font-weight: 700; }
 .wl-feature-cost-card .wl-donut-count { font-size: 0.82rem; }
 .wl-feature-cost-card .wl-donut-pct { font-size: 0.73rem; }
+.wl-feat-category {
+    color: #6b7084; font-size: 0.62rem; font-weight: 700;
+    line-height: 1.2; text-transform: uppercase;
+}
+.wl-matrix-audit-note {
+    color: #6b7084; font-size: 0.7rem; font-weight: 500;
+    margin-left: 0.5rem; text-transform: none;
+}
 .wl-matrix-footer {
     display: flex; align-items: center; justify-content: center;
     gap: 0.75rem; padding-top: 0.9rem; flex-wrap: wrap;
@@ -13001,8 +13009,20 @@ function _wlClearEvidenceFilters() {
     buildWinLoss();
 }
 function _wlFocusMatrix() {
+    window._wlShowAdditionalOnly = false;
     window._wlSortKey = 'lost_risk';
     window._wlMatrixExpanded = true;
+    buildWinLoss();
+    setTimeout(function() {
+        var matrix = document.querySelector('.wl-matrix-section');
+        if (matrix) matrix.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 80);
+}
+function _wlFocusAdditionalFeatures() {
+    window._wlShowAdditionalOnly = true;
+    window._wlSortKey = 'lost_risk';
+    window._wlMatrixExpanded = true;
+    window._wlFeatureQuery = '';
     buildWinLoss();
     setTimeout(function() {
         var matrix = document.querySelector('.wl-matrix-section');
@@ -13049,7 +13069,7 @@ function _wlRenderFeatureCostDonut(centerValue, segments) {
     var html = '<div class="wl-feature-cost-card">' +
         '<div class="wl-feature-cost-head">' +
             '<div class="wl-section-label-new">Feature Gaps Costing Lost Revenue</div>' +
-            '<div class="wl-feature-cost-sub">Top gaps + other</div>' +
+            '<div class="wl-feature-cost-sub">Associated value; accounts may cite multiple gaps</div>' +
         '</div>' +
         '<div class="wl-feature-cost-grid">' +
             '<div class="wl-feature-cost-chart">' +
@@ -13838,6 +13858,7 @@ function buildWinLoss() {
     var dealView = window._wlDealView || 'LOST';
     var expanded = window._wlExpanded === true;
     var matrixExpanded = window._wlMatrixExpanded === true;
+    var showAdditionalOnly = window._wlShowAdditionalOnly === true;
     var drillFeat = window._wlDrillFeat || null;
     var lossTypeFilter = window._wlLossTypeFilter || null;
     var valueFilter = window._wlValueFilter || null;
@@ -13946,9 +13967,11 @@ function buildWinLoss() {
 
     // ── MAIN FEATURE COST PIE ───────────────────────────────────────────
     var costPalette = ['#f87171', '#fb923c', '#f0c040', '#c084fc', '#60a5fa', '#b76e8a'];
+    window._wlAdditionalFeatureNames = [];
     var featureCostRows = rows.map(function(row) {
         return {
             feature: row.feature,
+            category: row.category || 'NEEDS_REVIEW',
             value: (row.lost_known_value || 0) + (row.lost_estimated_value || 0),
             dealCount: row.lost_deal_count || 0
         };
@@ -13972,17 +13995,24 @@ function buildWinLoss() {
             };
         });
         if (featureCostRows.length > featureCostTop.length) {
-            var otherValue = featureCostRows.slice(featureCostTop.length).reduce(function(sum, row) { return sum + row.value; }, 0);
-            var otherDemandTotal = featureCostRows.slice(featureCostTop.length).reduce(function(sum, row) {
-                var demand = featureDemand[row.feature] && featureDemand[row.feature].LOST;
-                return sum + (demand ? demand.total : row.dealCount || 0);
-            }, 0);
+            var additionalRows = featureCostRows.slice(featureCostTop.length);
+            var otherValue = additionalRows.reduce(function(sum, row) { return sum + row.value; }, 0);
+            window._wlAdditionalFeatureNames = additionalRows.map(function(row) { return row.feature; });
+            var additionalSet = new Set(window._wlAdditionalFeatureNames);
+            var otherAccountIds = new Set();
+            deals.forEach(function(deal) {
+                if (deal.outcome !== 'LOST') return;
+                var hasAdditional = (deal.features_mentioned || []).some(function(feat) {
+                    return additionalSet.has(feat.feature);
+                });
+                if (hasAdditional) otherAccountIds.add(deal.id || deal.deal_id || deal.name);
+            });
             featureCostSegments.push({
-                label: 'Other feature gaps',
+                label: 'Additional reviewed gaps',
                 value: otherValue,
-                display: _wlMoneyText(otherValue) + ' · ' + otherDemandTotal + ' accts',
+                display: additionalRows.length + ' gaps · ' + otherAccountIds.size + ' accts',
                 color: '#8b7a9e',
-                action: '_wlFocusMatrix()'
+                action: '_wlFocusAdditionalFeatures()'
             });
         }
         html += _wlRenderFeatureCostDonut(_wlMoneyText(featureCostTotal), featureCostSegments);
@@ -14034,8 +14064,13 @@ function buildWinLoss() {
     // ── FEATURE IMPACT MATRIX ─────────────────────────────────────────
     html += '<div class="wl-matrix-section">' +
         '<div class="wl-matrix-header">' +
-            '<div class="wl-section-label-new">Feature Impact Matrix</div>';
+            '<div class="wl-section-label-new">' + (showAdditionalOnly ? 'Additional Feature Gaps' : 'Feature Impact Matrix') +
+                (showAdditionalOnly ? '<span class="wl-matrix-audit-note">Reviewed and assigned to established product areas</span>' : '') +
+            '</div>';
     if (rows.length > 0) {
+        if (showAdditionalOnly) {
+            html += '<button type="button" class="wl-matrix-more-btn" onclick="window._wlShowAdditionalOnly=false;window._wlMatrixExpanded=false;buildWinLoss()">Show full matrix</button>';
+        }
         html += '<div class="wl-sort-pills">';
         [['lost_risk','Lost Risk'],['win_drivers','Win Drivers'],['deal_count','Volume'],['table_stakes','Table Stakes']].forEach(function(pair) {
             html += '<button class="wl-sort-pill' + (sortKey === pair[0] ? ' active' : '') + '" onclick="window._wlSortKey=\'' + pair[0] + '\';window._wlMatrixExpanded=false;buildWinLoss()">' + pair[1] + '</button>';
@@ -14069,8 +14104,16 @@ function buildWinLoss() {
         '</div>';
     } else {
         // Filter rows by search query
+        var filtered = showAdditionalOnly
+            ? rows.filter(function(r) { return window._wlAdditionalFeatureNames.indexOf(r.feature) !== -1; })
+            : rows;
         var fq = (window._wlFeatureQuery || '').toLowerCase();
-        var filtered = fq ? rows.filter(function(r){ return r.feature.toLowerCase().indexOf(fq) !== -1; }) : rows;
+        if (fq) {
+            filtered = filtered.filter(function(r){
+                return r.feature.toLowerCase().indexOf(fq) !== -1 ||
+                    String(r.category || '').toLowerCase().indexOf(fq) !== -1;
+            });
+        }
 
         // Sort rows based on selected key
         var sorted = filtered.slice().sort(function(a, b) {
@@ -14130,6 +14173,7 @@ function buildWinLoss() {
             // Center label
             html += '<div class="wl-matrix-center">' +
                 '<span class="wl-feat-name">' + esc(row.feature) + '</span>' +
+                '<span class="wl-feat-category">' + esc(row.category === 'NEEDS_REVIEW' ? 'Needs review' : row.category) + '</span>' +
                 '<span class="wl-feat-badge ' + (badgeCls[row.classification] || 'wl-badge-watch') + '">' + (badgeLbl[row.classification] || 'Watch') + '</span>' +
                 '<span class="wl-demand-chip">' + esc(_wlDemandText(demandAll, false)) + '</span>' +
                 '<span class="wl-row-action">' + (drillOutcome === 'WON' ? 'Won notes' : 'Lost notes') + '</span>' +

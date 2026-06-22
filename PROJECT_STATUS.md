@@ -20,6 +20,9 @@ Teachable Sales Intelligence. Pulls call transcripts from Fireflies, uses Claude
 - [x] Attendance Reporting requires actual attendance context; course sequencing, quiz logic, HIPAA/BAA, and PCI documentation remain separate feature groups
 - [x] Win/loss taxonomy regression suite covers seven representative false-positive and nesting cases
 - [x] 180-day HubSpot win/loss dataset and dashboard rebuilt after the taxonomy correction
+- [x] All 74 win/loss feature labels map to the 10 canonical product areas; only explicitly underspecified product-limitation notes remain NEEDS_REVIEW
+- [x] Win/loss "Additional reviewed gaps" drilldown exposes every rolled-up feature with its product area instead of presenting an opaque Other bucket
+- [x] Duplicate Localization / Multi-language Support signal consolidated into Multi-language Support
 
 - [x] Fireflies API integration (pull calls, filter by owner/keywords/date)
 - [x] Interactive call approval (select which calls to process)
