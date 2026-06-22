@@ -5,7 +5,8 @@
 [functions]
   directory = "netlify/functions"
 
-[[headers]]
-  for = "/*"
-  [headers.values]
-    Basic-Auth = "teachable:Teachable2026!"
+# Basic auth is enforced by the edge function in netlify/edge-functions/basic-auth.js
+# (the `Basic-Auth` header directive Netlify documents here is a no-op and was removed).
+[[edge_functions]]
+  path = "/*"
+  function = "basic-auth"
